@@ -328,6 +328,46 @@ export class CombatSystem {
   }
 
   /**
+   * Handle enemy death: emit events, drop loot, XP, spawn next enemy.
+   * Returns array of events. Guards against double-processing.
+   */
+  _handleEnemyDeath(events) {
+    if (!this.enemy || this.enemy._deathProcessed) return;
+    this.enemy._deathProcessed = true;
+
+    const gold = this.enemy.goldReward;
+    events.push({ type: 'enemyDeath', data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite, isBoss: this.enemy.isBoss || false } });
+
+    const dropChance = (this.enemy.isElite || this.enemy.isBoss) ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
+    if (Math.random() < dropChance) {
+      events.push({ type: 'lootDrop', data: { item: this.dropLoot(this.depth) } });
+    }
+
+    if (this.player.xp !== undefined && this.player.xpToLevel !== undefined) {
+      const xpGained = 10 + this.depth * 2;
+      this.player.xp += xpGained;
+      if (this.player.xp >= this.player.xpToLevel) {
+        this.player.xp -= this.player.xpToLevel;
+        this.player.level = (this.player.level || 1) + 1;
+        this.player.xpToLevel = Math.round(this.player.xpToLevel * 1.15);
+        events.push({ type: 'levelUp', data: { newLevel: this.player.level } });
+      }
+    }
+
+    this.bleedTargets = [];
+    const isBossDepth = this.depth > 0 && this.depth % BOSS_DEPTH_INTERVAL === 0;
+    const bossNotYetSpawned = this.bossSpawnedAtDepth !== this.depth;
+    if (isBossDepth && bossNotYetSpawned) {
+      this.enemy = this.spawnBoss(this.depth);
+      this.bossSpawnedAtDepth = this.depth;
+    } else {
+      this.enemy = this.spawnEnemy(this.depth);
+    }
+    this.playerAttackTimer = 0;
+    this.enemyAttackTimer = 0;
+  }
+
+  /**
    * Main update loop. Call every frame with the elapsed delta in ms.
    * Returns an array of combat events that occurred during this tick.
    * @param {number} deltaMs - Milliseconds since last tick
@@ -358,25 +398,8 @@ export class CombatSystem {
           this.enemy.health -= bleed.tickDamage;
           events.push({ type: 'bleedTick', data: { damage: bleed.tickDamage } });
 
-          // Check if bleed killed the enemy
           if (this.enemy.health <= 0) {
-            const gold = this.enemy.goldReward;
-            events.push({ type: 'enemyDeath', data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite, isBoss: this.enemy.isBoss || false } });
-            const dropChance = (this.enemy.isElite || this.enemy.isBoss) ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
-            if (Math.random() < dropChance) {
-              events.push({ type: 'lootDrop', data: { item: this.dropLoot(this.depth) } });
-            }
-            this.bleedTargets = [];
-            const isBossDepth = this.depth > 0 && this.depth % BOSS_DEPTH_INTERVAL === 0;
-            const bossNotYetSpawned = this.bossSpawnedAtDepth !== this.depth;
-            if (isBossDepth && bossNotYetSpawned) {
-              this.enemy = this.spawnBoss(this.depth);
-              this.bossSpawnedAtDepth = this.depth;
-            } else {
-              this.enemy = this.spawnEnemy(this.depth);
-            }
-            this.playerAttackTimer = 0;
-            this.enemyAttackTimer = 0;
+            this._handleEnemyDeath(events);
             break;
           }
         }
@@ -386,8 +409,11 @@ export class CombatSystem {
       }
     }
 
-    // --- Player attacks (skip if enemy died from bleed) ---
-    if (!this.enemy || this.enemy.health <= 0) return events;
+    // --- Handle enemy already dead (killed by ability or bleed) ---
+    if (this.enemy && this.enemy.health <= 0) {
+      this._handleEnemyDeath(events);
+      return events;
+    }
     const attackInterval = 1000 / (this.player.stats?.attackSpeed || this.player.attackSpeed || 1);
     this.playerAttackTimer += deltaMs;
 
@@ -405,52 +431,8 @@ export class CombatSystem {
 
       // Check enemy death
       if (this.enemy.health <= 0) {
-        const gold = this.enemy.goldReward;
-        events.push({
-          type: 'enemyDeath',
-          data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite, isBoss: this.enemy.isBoss || false },
-        });
-
-        // Drop loot (chance-based, elites/bosses always drop)
-        const dropChance = (this.enemy.isElite || this.enemy.isBoss) ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
-        if (Math.random() < dropChance) {
-          const loot = this.dropLoot(this.depth);
-          events.push({
-            type: 'lootDrop',
-            data: { item: loot },
-          });
-        }
-
-        // Check for level-up (simple XP: 10 + depth * 2 per kill)
-        if (this.player.xp !== undefined && this.player.xpToLevel !== undefined) {
-          const xpGained = 10 + this.depth * 2;
-          this.player.xp += xpGained;
-          if (this.player.xp >= this.player.xpToLevel) {
-            this.player.xp -= this.player.xpToLevel;
-            this.player.level = (this.player.level || 1) + 1;
-            this.player.xpToLevel = Math.round(this.player.xpToLevel * 1.15);
-            events.push({
-              type: 'levelUp',
-              data: { newLevel: this.player.level },
-            });
-          }
-        }
-
-        // Clear bleeds on enemy death
-        this.bleedTargets = [];
-
-        // Check if we should spawn a boss at this depth
-        const isBossDepth = this.depth > 0 && this.depth % BOSS_DEPTH_INTERVAL === 0;
-        const bossNotYetSpawned = this.bossSpawnedAtDepth !== this.depth;
-        if (isBossDepth && bossNotYetSpawned) {
-          this.enemy = this.spawnBoss(this.depth);
-          this.bossSpawnedAtDepth = this.depth;
-        } else {
-          this.enemy = this.spawnEnemy(this.depth);
-        }
-        this.playerAttackTimer = 0;
-        this.enemyAttackTimer = 0;
-        break; // start fresh next tick
+        this._handleEnemyDeath(events);
+        break;
       }
     }
 

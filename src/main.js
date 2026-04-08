@@ -6,12 +6,15 @@ import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { PostRunScene } from './scenes/PostRunScene.js';
 
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
 const config = {
-  type: Phaser.AUTO,
+  type: Phaser.CANVAS,
   parent: 'game-container',
   width: 1280,
   height: 720,
   backgroundColor: '#1a1a2e',
+  resolution: dpr,
   render: {
     pixelArt: false,
     antialias: true,
