@@ -59,10 +59,9 @@ export class GameScene extends Phaser.Scene {
     this.stormOverlay = null;
     this.stormLabel = null;
 
-    // ---- Draw combat area background (left side: 0-500px) ----
+    // ---- Draw combat area background (zone-specific, left side: 0-500px) ----
     const combatBg = this.add.graphics();
-    combatBg.fillStyle(0x12122a, 1);
-    combatBg.fillRect(0, 0, 500, height);
+    this._drawZoneBackground(combatBg, 500, height, this.zoneData.id);
     // Subtle border on right edge
     combatBg.lineStyle(2, 0x333355, 1);
     combatBg.lineBetween(499, 0, 499, height);
@@ -297,8 +296,8 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(11).setVisible(false);
       cdText.setShadow(1, 1, '#000000', 2);
 
-      // Ability name label below the icon
-      const nameLabel = this.add.text(ax + abSize / 2, ay + abSize + 2, def.hotkey, {
+      // Ward charges label (only used for threshWard, hidden for others)
+      const nameLabel = this.add.text(ax + abSize / 2, ay + abSize + 2, '', {
         fontFamily: 'monospace', fontSize: '9px', color: '#888899',
       }).setOrigin(0.5).setDepth(9);
 
@@ -420,21 +419,57 @@ export class GameScene extends Phaser.Scene {
 
   _drawPlayer() {
     const g = this.playerGfx;
+    const px = this.playerX;
+    const py = this.playerY;
     g.clear();
-    // Body (colored rectangle)
-    g.fillStyle(0x4ade80, 1);
-    g.fillRect(this.playerX - 25, this.playerY - 35, 50, 70);
-    // Outline
-    g.lineStyle(2, 0x22aa55, 1);
-    g.strokeRect(this.playerX - 25, this.playerY - 35, 50, 70);
-    // Head (circle)
-    g.fillStyle(0x66dd99, 1);
-    g.fillCircle(this.playerX, this.playerY - 45, 14);
-    g.lineStyle(1, 0x22aa55, 1);
-    g.strokeCircle(this.playerX, this.playerY - 45, 14);
-    // Weapon line
-    g.lineStyle(3, 0xcccccc, 1);
-    g.lineBetween(this.playerX + 25, this.playerY - 10, this.playerX + 40, this.playerY - 30);
+    // Legs
+    g.fillStyle(0x334455, 1);
+    g.fillRect(px - 14, py + 15, 10, 20);
+    g.fillRect(px + 4, py + 15, 10, 20);
+    // Boots
+    g.fillStyle(0x5a3a1a, 1);
+    g.fillRect(px - 16, py + 30, 14, 6);
+    g.fillRect(px + 2, py + 30, 14, 6);
+    // Torso (armor)
+    g.fillStyle(0x2a6a4a, 1);
+    g.fillRect(px - 18, py - 18, 36, 34);
+    g.lineStyle(1, 0x3a8a6a, 1);
+    g.strokeRect(px - 18, py - 18, 36, 34);
+    // Belt
+    g.fillStyle(0x7a5a2a, 1);
+    g.fillRect(px - 18, py + 12, 36, 5);
+    // Shoulder pads
+    g.fillStyle(0x3a7a5a, 1);
+    g.fillRect(px - 22, py - 18, 8, 10);
+    g.fillRect(px + 14, py - 18, 8, 10);
+    // Arms
+    g.fillStyle(0x2a6a4a, 1);
+    g.fillRect(px - 24, py - 8, 8, 20);
+    g.fillRect(px + 16, py - 8, 8, 20);
+    // Gloves
+    g.fillStyle(0x5a3a1a, 1);
+    g.fillCircle(px - 20, py + 14, 5);
+    g.fillCircle(px + 20, py + 14, 5);
+    // Head
+    g.fillStyle(0xddbbaa, 1);
+    g.fillCircle(px, py - 28, 12);
+    // Helmet
+    g.fillStyle(0x4a8a6a, 1);
+    g.fillRect(px - 13, py - 40, 26, 12);
+    g.lineStyle(1, 0x5aaa8a, 1);
+    g.strokeRect(px - 13, py - 40, 26, 12);
+    // Visor slit
+    g.fillStyle(0x111111, 1);
+    g.fillRect(px - 8, py - 33, 16, 3);
+    // Weapon (sword)
+    g.lineStyle(3, 0xaaaacc, 1);
+    g.lineBetween(px + 24, py + 10, px + 36, py - 22);
+    // Sword guard
+    g.lineStyle(2, 0x7a5a2a, 1);
+    g.lineBetween(px + 20, py - 2, px + 30, py - 2);
+    // Cape (behind, subtle)
+    g.fillStyle(0x1a4a3a, 0.6);
+    g.fillTriangle(px - 14, py - 14, px + 14, py - 14, px, py + 25);
   }
 
   _drawEnemy() {
@@ -443,32 +478,217 @@ export class GameScene extends Phaser.Scene {
     const enemy = this.combatSystem.enemy;
     if (!enemy) return;
 
+    const ex = this.enemyX;
+    const ey = this.enemyY;
     const isBoss = enemy.isBoss || false;
-    const scale = isBoss ? 1.4 : 1;
-    const baseColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0xe94560);
-    const outlineColor = isBoss ? 0xcc9900 : (enemy.isElite ? 0xcc5500 : 0xbb2244);
+    const s = isBoss ? 1.4 : 1;
+    const name = enemy.name.toLowerCase();
 
-    const bw = 50 * scale;
-    const bh = 70 * scale;
-    const headR = 14 * scale;
+    // Pick shape/colors based on enemy name keywords
+    if (name.includes('wolf') || name.includes('hound') || name.includes('drake')) {
+      // Quadruped beast
+      const bodyColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0x885544);
+      g.fillStyle(bodyColor, 1);
+      g.fillRect(ex - 28 * s, ey - 5 * s, 56 * s, 24 * s); // long body
+      g.fillCircle(ex + 26 * s, ey, 12 * s); // head
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(ex + 30 * s, ey - 4 * s, 2 * s); // eye
+      // Legs
+      g.fillStyle(bodyColor, 0.9);
+      g.fillRect(ex - 22 * s, ey + 16 * s, 6 * s, 18 * s);
+      g.fillRect(ex - 8 * s, ey + 16 * s, 6 * s, 18 * s);
+      g.fillRect(ex + 8 * s, ey + 16 * s, 6 * s, 18 * s);
+      g.fillRect(ex + 20 * s, ey + 16 * s, 6 * s, 18 * s);
+      // Tail
+      g.lineStyle(3 * s, bodyColor, 1);
+      g.lineBetween(ex - 28 * s, ey, ex - 38 * s, ey - 14 * s);
+    } else if (name.includes('golem') || name.includes('construct') || name.includes('sentinel')) {
+      // Hulking golem
+      const bodyColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0x667788);
+      g.fillStyle(bodyColor, 1);
+      g.fillRect(ex - 22 * s, ey - 30 * s, 44 * s, 50 * s); // wide torso
+      g.fillRect(ex - 10 * s, ey + 20 * s, 8 * s, 16 * s); // left leg
+      g.fillRect(ex + 2 * s, ey + 20 * s, 8 * s, 16 * s); // right leg
+      g.fillRect(ex - 30 * s, ey - 20 * s, 10 * s, 30 * s); // left arm
+      g.fillRect(ex + 20 * s, ey - 20 * s, 10 * s, 30 * s); // right arm
+      // Head (small on top)
+      g.fillStyle(bodyColor, 0.8);
+      g.fillRect(ex - 8 * s, ey - 40 * s, 16 * s, 12 * s);
+      g.fillStyle(isBoss ? 0xff0000 : 0x44ffff, 1);
+      g.fillCircle(ex - 3 * s, ey - 35 * s, 2 * s);
+      g.fillCircle(ex + 3 * s, ey - 35 * s, 2 * s);
+      // Cracks / detail lines
+      g.lineStyle(1, 0x445566, 0.6);
+      g.lineBetween(ex - 10 * s, ey - 20 * s, ex + 5 * s, ey + 10 * s);
+    } else if (name.includes('wraith') || name.includes('ghost') || name.includes('shade') || name.includes('specter')) {
+      // Floating wraith (no legs, wispy)
+      const bodyColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0x6644aa);
+      g.fillStyle(bodyColor, 0.6);
+      g.fillCircle(ex, ey - 15 * s, 20 * s); // upper body / head
+      g.fillTriangle(ex - 20 * s, ey - 5 * s, ex + 20 * s, ey - 5 * s, ex, ey + 35 * s); // wispy tail
+      // Eyes (glowing)
+      g.fillStyle(isBoss ? 0xff0000 : 0x00ffaa, 1);
+      g.fillCircle(ex - 6 * s, ey - 18 * s, 3 * s);
+      g.fillCircle(ex + 6 * s, ey - 18 * s, 3 * s);
+      // Arms (floating wisps)
+      g.lineStyle(2 * s, bodyColor, 0.5);
+      g.lineBetween(ex - 18 * s, ey - 8 * s, ex - 30 * s, ey + 5 * s);
+      g.lineBetween(ex + 18 * s, ey - 8 * s, ex + 30 * s, ey + 5 * s);
+    } else if (name.includes('shambler') || name.includes('taken') || name.includes('revenant') || name.includes('bound')) {
+      // Undead shambler (hunched humanoid)
+      const bodyColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0x556644);
+      g.fillStyle(bodyColor, 1);
+      g.fillRect(ex - 14 * s, ey - 20 * s, 28 * s, 40 * s); // body
+      g.fillRect(ex - 8 * s, ey + 20 * s, 6 * s, 14 * s); // left leg
+      g.fillRect(ex + 2 * s, ey + 20 * s, 6 * s, 14 * s); // right leg (shorter = limp)
+      // Hunched head
+      g.fillStyle(bodyColor, 0.7);
+      g.fillCircle(ex + 4 * s, ey - 26 * s, 10 * s);
+      // Hollow eyes
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(ex + 1 * s, ey - 28 * s, 3 * s);
+      g.fillCircle(ex + 8 * s, ey - 28 * s, 3 * s);
+      // Dangling arm
+      g.lineStyle(3 * s, bodyColor, 0.8);
+      g.lineBetween(ex - 14 * s, ey - 10 * s, ex - 22 * s, ey + 15 * s);
+      g.lineBetween(ex + 14 * s, ey - 10 * s, ex + 20 * s, ey + 8 * s);
+    } else {
+      // Default humanoid enemy
+      const baseColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0xe94560);
+      const outlineColor = isBoss ? 0xcc9900 : (enemy.isElite ? 0xcc5500 : 0xbb2244);
+      // Legs
+      g.fillStyle(0x332222, 1);
+      g.fillRect(ex - 10 * s, ey + 15 * s, 8 * s, 18 * s);
+      g.fillRect(ex + 2 * s, ey + 15 * s, 8 * s, 18 * s);
+      // Body
+      g.fillStyle(baseColor, 1);
+      g.fillRect(ex - 16 * s, ey - 18 * s, 32 * s, 34 * s);
+      g.lineStyle(1, outlineColor, 1);
+      g.strokeRect(ex - 16 * s, ey - 18 * s, 32 * s, 34 * s);
+      // Arms
+      g.fillStyle(baseColor, 0.9);
+      g.fillRect(ex - 22 * s, ey - 12 * s, 8 * s, 22 * s);
+      g.fillRect(ex + 14 * s, ey - 12 * s, 8 * s, 22 * s);
+      // Head
+      g.fillStyle(baseColor, 0.8);
+      g.fillCircle(ex, ey - 28 * s, 11 * s);
+      g.lineStyle(1, outlineColor, 1);
+      g.strokeCircle(ex, ey - 28 * s, 11 * s);
+      // Eyes
+      g.fillStyle(isBoss ? 0xff0000 : 0xffffff, 1);
+      g.fillCircle(ex - 4 * s, ey - 30 * s, 2.5 * s);
+      g.fillCircle(ex + 4 * s, ey - 30 * s, 2.5 * s);
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(ex - 4 * s, ey - 30 * s, 1.2 * s);
+      g.fillCircle(ex + 4 * s, ey - 30 * s, 1.2 * s);
+      // Weapon
+      g.lineStyle(2 * s, 0x888888, 1);
+      g.lineBetween(ex - 22 * s, ey + 8 * s, ex - 32 * s, ey - 12 * s);
+    }
+  }
 
-    // Body
-    g.fillStyle(baseColor, 1);
-    g.fillRect(this.enemyX - bw / 2, this.enemyY - bh / 2, bw, bh);
-    g.lineStyle(2, outlineColor, 1);
-    g.strokeRect(this.enemyX - bw / 2, this.enemyY - bh / 2, bw, bh);
-    // Head
-    g.fillStyle(baseColor, 0.8);
-    g.fillCircle(this.enemyX, this.enemyY - bh / 2 - headR + 2, headR);
-    g.lineStyle(1, outlineColor, 1);
-    g.strokeCircle(this.enemyX, this.enemyY - bh / 2 - headR + 2, headR);
-    // Eyes
-    g.fillStyle(isBoss ? 0xff0000 : 0xffffff, 1);
-    g.fillCircle(this.enemyX - 5 * scale, this.enemyY - bh / 2 - headR, 3 * scale);
-    g.fillCircle(this.enemyX + 5 * scale, this.enemyY - bh / 2 - headR, 3 * scale);
-    g.fillStyle(0x000000, 1);
-    g.fillCircle(this.enemyX - 5 * scale, this.enemyY - bh / 2 - headR, 1.5 * scale);
-    g.fillCircle(this.enemyX + 5 * scale, this.enemyY - bh / 2 - headR, 1.5 * scale);
+  _drawZoneBackground(g, w, h, zoneId) {
+    const zoneColors = {
+      ashveil:      { sky: 0x1a1a2e, ground: 0x2a2520, accent: 0xcc8833 },
+      embersteppe:  { sky: 0x1a1208, ground: 0x2a1a0a, accent: 0xcc4400 },
+      thornwood:    { sky: 0x0e1e10, ground: 0x1a2a18, accent: 0x2a5a28 },
+      ironholt:     { sky: 0x141418, ground: 0x222228, accent: 0x334455 },
+      scarred_ring: { sky: 0x1a0a08, ground: 0x2a1510, accent: 0x882211 },
+      ashen_maw:    { sky: 0x050508, ground: 0x1a1510, accent: 0xffdd44 },
+    };
+    const c = zoneColors[zoneId] || zoneColors.ashveil;
+
+    // Sky gradient
+    g.fillStyle(c.sky, 1);
+    g.fillRect(0, 0, w, h);
+
+    // Ground plane
+    g.fillStyle(c.ground, 1);
+    g.fillRect(0, h * 0.65, w, h * 0.35);
+    g.lineStyle(1, c.accent, 0.3);
+    g.lineBetween(0, h * 0.65, w, h * 0.65);
+
+    // Zone-specific decorations
+    if (zoneId === 'ashveil') {
+      // Dead trees silhouettes
+      for (let i = 0; i < 6; i++) {
+        const tx = 30 + i * 85;
+        const ty = h * 0.65;
+        g.lineStyle(2, 0x3a3530, 0.5);
+        g.lineBetween(tx, ty, tx, ty - 40 - i * 8);
+        g.lineBetween(tx, ty - 25, tx - 12, ty - 40);
+        g.lineBetween(tx, ty - 30, tx + 10, ty - 45);
+      }
+      // Ember crystals (small amber dots)
+      g.fillStyle(0xcc8833, 0.4);
+      for (let i = 0; i < 8; i++) g.fillCircle(50 + i * 60, h * 0.62 - (i % 3) * 15, 2 + (i % 2));
+    } else if (zoneId === 'embersteppe') {
+      // Lava cracks on ground
+      g.lineStyle(1, 0xff4400, 0.3);
+      for (let i = 0; i < 5; i++) {
+        const lx = 20 + i * 100;
+        g.lineBetween(lx, h * 0.7, lx + 40, h * 0.75);
+        g.lineBetween(lx + 40, h * 0.75, lx + 20, h * 0.85);
+      }
+      // Distant volcano
+      g.fillStyle(0x2a1a0a, 0.6);
+      g.fillTriangle(380, h * 0.65, 440, h * 0.35, 500, h * 0.65);
+      g.fillStyle(0xcc4400, 0.3);
+      g.fillCircle(440, h * 0.36, 6);
+    } else if (zoneId === 'thornwood') {
+      // Dense canopy (overlapping circles on top)
+      g.fillStyle(0x1a3a18, 0.6);
+      for (let i = 0; i < 8; i++) g.fillCircle(30 + i * 65, h * 0.15 + (i % 2) * 20, 40 + (i % 3) * 10);
+      // Tree trunks
+      g.fillStyle(0x3a2a1a, 0.4);
+      for (let i = 0; i < 4; i++) { g.fillRect(60 + i * 120, h * 0.25, 8, h * 0.42); }
+      // Vines
+      g.lineStyle(1, 0x2a5a28, 0.3);
+      for (let i = 0; i < 5; i++) g.lineBetween(40 + i * 100, h * 0.2, 50 + i * 100, h * 0.5);
+    } else if (zoneId === 'ironholt') {
+      // Industrial structures (rectangles)
+      g.fillStyle(0x222230, 0.5);
+      g.fillRect(20, h * 0.4, 60, h * 0.25);
+      g.fillRect(400, h * 0.35, 80, h * 0.3);
+      // Smokestacks
+      g.fillStyle(0x333340, 0.4);
+      g.fillRect(40, h * 0.2, 12, h * 0.2);
+      g.fillRect(430, h * 0.15, 12, h * 0.2);
+      // Smoke wisps
+      g.fillStyle(0x444455, 0.15);
+      g.fillCircle(46, h * 0.18, 8);
+      g.fillCircle(50, h * 0.12, 12);
+      g.fillCircle(436, h * 0.13, 10);
+    } else if (zoneId === 'scarred_ring') {
+      // Lava rivers on ground
+      g.fillStyle(0x882211, 0.4);
+      g.fillRect(0, h * 0.78, w, 6);
+      g.fillRect(0, h * 0.88, w, 4);
+      // Obsidian spires
+      g.fillStyle(0x0a0808, 0.7);
+      g.fillTriangle(80, h * 0.65, 100, h * 0.3, 120, h * 0.65);
+      g.fillTriangle(350, h * 0.65, 375, h * 0.25, 400, h * 0.65);
+      // Glow at base of spires
+      g.fillStyle(0x882211, 0.2);
+      g.fillCircle(100, h * 0.65, 15);
+      g.fillCircle(375, h * 0.65, 15);
+    } else if (zoneId === 'ashen_maw') {
+      // The crater glow (ominous amber from below)
+      g.fillStyle(0xffdd44, 0.04);
+      g.fillCircle(250, h * 0.9, 200);
+      g.fillStyle(0xffdd44, 0.06);
+      g.fillCircle(250, h * 0.9, 120);
+      // Floating shard fragments
+      g.fillStyle(0xffdd44, 0.3);
+      for (let i = 0; i < 10; i++) {
+        const fx = 30 + i * 48;
+        const fy = h * 0.2 + (i % 3) * 30 + Math.sin(i) * 15;
+        g.fillRect(fx - 2, fy - 4, 4, 8);
+      }
+      // Ground cracks glowing
+      g.lineStyle(1, 0xffdd44, 0.15);
+      for (let i = 0; i < 6; i++) g.lineBetween(i * 80 + 20, h * 0.7, i * 80 + 60, h * 0.9);
+    }
   }
 
   _updatePlayerHealthBar() {

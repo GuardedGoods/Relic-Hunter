@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { RARITY_COLORS, SLOT, INVENTORY_COLS, INVENTORY_ROWS, INVENTORY_SIZE, ITEM_SETS } from '../data/constants.js';
+import { RARITY_COLORS, SLOT, INVENTORY_COLS, INVENTORY_ROWS, INVENTORY_SIZE, ITEM_SETS, RARITY, RARITY_ORDER } from '../data/constants.js';
 import { compareItems, formatAffix, getItemScore } from '../systems/InventorySystem.js';
 
 const UI_X = 504;
@@ -7,6 +7,15 @@ const UI_W = 452;
 const PANEL_COLOR = 0x16213e;
 const PANEL_BORDER = 0x333355;
 const ACCENT = 0xe94560;
+
+const SLOT_ICONS = {
+  [SLOT.WEAPON]: '⚔',
+  [SLOT.HELMET]: '👑',
+  [SLOT.CHEST]: '🛡',
+  [SLOT.GLOVES]: '🧤',
+  [SLOT.BOOTS]: '👢',
+  ring: '💍',
+};
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -223,7 +232,8 @@ export class UIScene extends Phaser.Scene {
       const item = this.player.equipment[slot.key];
 
       // Slot label
-      const labelText = this.add.text(panelX + 14, sy, `${slot.label}:`, {
+      const icon = SLOT_ICONS[slot.key] || '•';
+      const labelText = this.add.text(panelX + 14, sy, `${icon} ${slot.label}:`, {
         fontFamily: 'monospace',
         fontSize: '11px',
         color: '#888899',
@@ -304,6 +314,92 @@ export class UIScene extends Phaser.Scene {
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
 
+    const panelX = this.invPanelX;
+    const panelY = this.invPanelY;
+    const panelW = this.invPanelW;
+
+    // Quick discard buttons
+    const discardRarities = [
+      { rarity: RARITY.COMMON, label: 'C', color: RARITY_COLORS[RARITY.COMMON] },
+      { rarity: RARITY.UNCOMMON, label: 'U', color: RARITY_COLORS[RARITY.UNCOMMON] },
+      { rarity: RARITY.RARE, label: 'R', color: RARITY_COLORS[RARITY.RARE] },
+      { rarity: RARITY.EPIC, label: 'E', color: RARITY_COLORS[RARITY.EPIC] },
+      { rarity: RARITY.LEGENDARY, label: 'L', color: RARITY_COLORS[RARITY.LEGENDARY] },
+    ];
+
+    const discBtnW = 24;
+    const discBtnH = 16;
+    const discStartX = panelX + panelW - (discardRarities.length * (discBtnW + 3)) - 10;
+    const discY = panelY + 4;
+
+    discardRarities.forEach((dr, i) => {
+      const dx = discStartX + i * (discBtnW + 3);
+      const bg2 = this.add.graphics().setDepth(2);
+      bg2.fillStyle(0x111128, 1);
+      bg2.fillRoundedRect(dx, discY, discBtnW, discBtnH, 3);
+      bg2.lineStyle(1, Phaser.Display.Color.HexStringToColor(dr.color).color, 0.6);
+      bg2.strokeRoundedRect(dx, discY, discBtnW, discBtnH, 3);
+
+      const label = this.add.text(dx + discBtnW / 2, discY + discBtnH / 2, dr.label, {
+        fontFamily: 'monospace', fontSize: '9px', color: dr.color, fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(3);
+
+      const hit = this.add.rectangle(dx + discBtnW / 2, discY + discBtnH / 2, discBtnW, discBtnH)
+        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+
+      hit.on('pointerdown', () => {
+        const toDiscard = this.player.inventory.filter(it => it.rarity === dr.rarity);
+        toDiscard.forEach(it => this.player.removeFromInventory(it.id));
+        if (toDiscard.length > 0) {
+          this._showFloatingMessage(`Discarded ${toDiscard.length} ${dr.rarity} items`, dr.color);
+          this._refreshAll();
+        }
+      });
+
+      // Tooltip on hover
+      hit.on('pointerover', () => {
+        label.setColor('#ffffff');
+      });
+      hit.on('pointerout', () => {
+        label.setColor(dr.color);
+      });
+    });
+
+    // Loot filter initialization
+    if (!this.player.lootFilter) {
+      this.player.lootFilter = {};
+    }
+
+    // Filter toggles
+    const filterY = discY + discBtnH + 4;
+    this.add.text(discStartX - 30, filterY + 2, 'Skip:', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#555566',
+    }).setDepth(2);
+
+    discardRarities.forEach((dr, i) => {
+      const fx = discStartX + i * (discBtnW + 3);
+      const isFiltered = this.player.lootFilter && this.player.lootFilter[dr.rarity];
+
+      const filterBg = this.add.graphics().setDepth(2);
+      filterBg.fillStyle(isFiltered ? 0x442222 : 0x111128, 1);
+      filterBg.fillRoundedRect(fx, filterY, discBtnW, discBtnH, 3);
+
+      const filterLabel = this.add.text(fx + discBtnW / 2, filterY + discBtnH / 2,
+        isFiltered ? '✕' : dr.label, {
+        fontFamily: 'monospace', fontSize: '9px',
+        color: isFiltered ? '#e94560' : '#444455', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(3);
+
+      const filterHit = this.add.rectangle(fx + discBtnW / 2, filterY + discBtnH / 2, discBtnW, discBtnH)
+        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+
+      filterHit.on('pointerdown', () => {
+        if (!this.player.lootFilter) this.player.lootFilter = {};
+        this.player.lootFilter[dr.rarity] = !this.player.lootFilter[dr.rarity];
+        this._refreshAll();
+      });
+    });
+
     this._refreshInventoryGrid();
   }
 
@@ -367,6 +463,31 @@ export class UIScene extends Phaser.Scene {
           }).setOrigin(1, 0).setDepth(3);
           this.invCellElements.push(scoreText);
 
+          // Compare to equipped
+          const equippedSlotKey = item.slot === SLOT.RING ? 'ring' : item.slot;
+          const equippedItem = this.player.equipment[equippedSlotKey] || null;
+          const comparison = compareItems(equippedItem, item, this.player.getComputedStats());
+
+          let arrowText = '▲';
+          let arrowColor = '#4ade80'; // green = upgrade
+          if (equippedItem) {
+            if (comparison.overallBetter) {
+              arrowText = '▲';
+              arrowColor = '#4ade80';
+            } else if (comparison.changes.every(c => c.diff === 0)) {
+              arrowText = '●';
+              arrowColor = '#f0c040';
+            } else {
+              arrowText = '▼';
+              arrowColor = '#e94560';
+            }
+          }
+
+          const arrow = this.add.text(cx + cellW - 4, cy + 2, arrowText, {
+            fontFamily: 'monospace', fontSize: '10px', color: arrowColor, fontStyle: 'bold',
+          }).setOrigin(1, 0).setDepth(3);
+          this.invCellElements.push(arrow);
+
           const hitArea = this.add.rectangle(cx + cellW / 2, cy + cellH / 2, cellW, cellH)
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true })
@@ -382,6 +503,7 @@ export class UIScene extends Phaser.Scene {
             cellBg.fillRoundedRect(cx, cy, cellW, cellH, 4);
             cellBg.lineStyle(1, rColorInt, 1);
             cellBg.strokeRoundedRect(cx, cy, cellW, cellH, 4);
+            this._showItemTooltip(item);
           });
           hitArea.on('pointerout', () => {
             cellBg.clear();
@@ -389,6 +511,7 @@ export class UIScene extends Phaser.Scene {
             cellBg.fillRoundedRect(cx, cy, cellW, cellH, 4);
             cellBg.lineStyle(1, 0x555577, 1);
             cellBg.strokeRoundedRect(cx, cy, cellW, cellH, 4);
+            this._hideTooltip();
           });
           hitArea.on('pointerdown', () => {
             this._showItemTooltip(item);
@@ -633,6 +756,12 @@ export class UIScene extends Phaser.Scene {
 
   _onLootDrop(data) {
     const { item } = data;
+
+    // Check loot filter
+    if (this.player.lootFilter && this.player.lootFilter[item.rarity]) {
+      this._showFloatingMessage(`Filtered: ${item.name}`, '#555566');
+      return;
+    }
 
     if (!this.player.isInventoryFull()) {
       this.player.addToInventory(item);
