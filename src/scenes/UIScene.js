@@ -40,6 +40,7 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.on('lootDrop', this._onLootDrop, this);
       gameScene.events.on('playerHealthChanged', this._onHealthChanged, this);
       gameScene.events.on('statsChanged', this._onStatsChanged, this);
+      gameScene.events.on('pauseToggled', this._onPauseToggled, this);
     }
 
     // ---- Set bonus indicator ----
@@ -650,7 +651,7 @@ export class UIScene extends Phaser.Scene {
       const cellW = Math.floor((UI_W - invPadding * 2 - (INVENTORY_COLS - 1) * invGap) / INVENTORY_COLS);
       const cellH = Math.floor((invPanelH - invHeaderH - invPadding * 2 - (INVENTORY_ROWS - 1) * invGap) / INVENTORY_ROWS);
       const fx = UI_X + invPadding + col * (cellW + invGap) + cellW / 2;
-      const fy = (this.invPanelY || 326) + invHeaderH + row * (cellH + invGap) + cellH / 2;
+      const fy = (this.invPanelY || 306) + invHeaderH + row * (cellH + invGap) + cellH / 2;
 
       const flash = this.add.graphics().setDepth(10);
       const rColorInt = Phaser.Display.Color.HexStringToColor(RARITY_COLORS[item.rarity] || '#ffffff').color;
@@ -945,6 +946,19 @@ export class UIScene extends Phaser.Scene {
 
   _onStatsChanged(_stats) {
     this._updateStatsDisplay();
+  }
+
+  _onPauseToggled(isPaused) {
+    // When combat is paused, add visual indicator to UI panel
+    if (this._pauseIndicator) {
+      this._pauseIndicator.destroy();
+      this._pauseIndicator = null;
+    }
+    if (isPaused) {
+      this._pauseIndicator = this.add.text(UI_X + UI_W / 2, 2, '\u23F8 PAUSED - Manage your gear!', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#4ade80', fontStyle: 'bold',
+      }).setOrigin(0.5, 0).setDepth(100);
+    }
   }
 
   // ==========================
