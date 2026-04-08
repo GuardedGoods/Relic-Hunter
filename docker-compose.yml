@@ -15,10 +15,10 @@ services:
       dockerfile: Dockerfile
     container_name: relic-hunter
     ports:
-      # Host port 8080 -> container port 80
+      # Host port 8049 -> container port 80
       # Configure your Synology reverse proxy to route
       # relic-hunter.dukestack.com -> localhost:8080
-      - "8080:80"
+      - "8049:80"
     restart: unless-stopped
     labels:
       - "com.dukestack.app=relic-hunter"
