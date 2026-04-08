@@ -31,6 +31,7 @@ export class UIScene extends Phaser.Scene {
     this.lootPopup = null;
     this.equipSlotElements = [];
     this.invCellElements = [];
+    this.filterElements = [];
     this.setBonusTexts = [];
     this._invTitleText = null;
 
@@ -318,61 +319,95 @@ export class UIScene extends Phaser.Scene {
     const panelY = this.invPanelY;
     const panelW = this.invPanelW;
 
-    // Quick discard buttons
-    const discardRarities = [
-      { rarity: RARITY.COMMON, label: 'C', color: RARITY_COLORS[RARITY.COMMON] },
-      { rarity: RARITY.UNCOMMON, label: 'U', color: RARITY_COLORS[RARITY.UNCOMMON] },
-      { rarity: RARITY.RARE, label: 'R', color: RARITY_COLORS[RARITY.RARE] },
-      { rarity: RARITY.EPIC, label: 'E', color: RARITY_COLORS[RARITY.EPIC] },
-      { rarity: RARITY.LEGENDARY, label: 'L', color: RARITY_COLORS[RARITY.LEGENDARY] },
+    // Trash by rarity buttons - clear label
+    this.add.text(panelX + 14, panelY + 4, 'Trash:', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#666677',
+    }).setDepth(2);
+
+    const trashRarities = [
+      { rarity: RARITY.COMMON, label: 'Com', color: RARITY_COLORS[RARITY.COMMON] },
+      { rarity: RARITY.UNCOMMON, label: 'Unc', color: RARITY_COLORS[RARITY.UNCOMMON] },
+      { rarity: RARITY.RARE, label: 'Rar', color: RARITY_COLORS[RARITY.RARE] },
+      { rarity: RARITY.EPIC, label: 'Epc', color: RARITY_COLORS[RARITY.EPIC] },
+      { rarity: RARITY.LEGENDARY, label: 'Leg', color: RARITY_COLORS[RARITY.LEGENDARY] },
     ];
 
-    const discBtnW = 24;
-    const discBtnH = 16;
-    const discStartX = panelX + panelW - (discardRarities.length * (discBtnW + 3)) - 10;
-    const discY = panelY + 4;
+    const trashBtnW = 32;
+    const trashBtnH = 14;
+    const trashStartX = panelX + 50;
+    const trashY = panelY + 3;
 
-    this.add.text(discStartX - 50, discY + discBtnH / 2, 'Discard:', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#666677',
-    }).setOrigin(0, 0.5).setDepth(2);
+    trashRarities.forEach((tr, i) => {
+      const tx = trashStartX + i * (trashBtnW + 2);
+      const tbg = this.add.graphics().setDepth(2);
+      tbg.fillStyle(0x1a1020, 1);
+      tbg.fillRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
+      const trashColorInt = Phaser.Display.Color.HexStringToColor(tr.color).color;
+      tbg.lineStyle(1, trashColorInt, 0.5);
+      tbg.strokeRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
 
-    discardRarities.forEach((dr, i) => {
-      const dx = discStartX + i * (discBtnW + 3);
-      const bg2 = this.add.graphics().setDepth(2);
-      bg2.fillStyle(0x111128, 1);
-      bg2.fillRoundedRect(dx, discY, discBtnW, discBtnH, 3);
-      bg2.lineStyle(1, Phaser.Display.Color.HexStringToColor(dr.color).color, 0.6);
-      bg2.strokeRoundedRect(dx, discY, discBtnW, discBtnH, 3);
-
-      const label = this.add.text(dx + discBtnW / 2, discY + discBtnH / 2, dr.label, {
-        fontFamily: 'monospace', fontSize: '9px', color: dr.color, fontStyle: 'bold',
+      const tLabel = this.add.text(tx + trashBtnW / 2, trashY + trashBtnH / 2, tr.label, {
+        fontFamily: 'monospace', fontSize: '7px', color: tr.color,
       }).setOrigin(0.5).setDepth(3);
 
-      const hit = this.add.rectangle(dx + discBtnW / 2, discY + discBtnH / 2, discBtnW, discBtnH)
+      const tHit = this.add.rectangle(tx + trashBtnW / 2, trashY + trashBtnH / 2, trashBtnW, trashBtnH)
         .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
 
-      hit.on('pointerdown', () => {
-        const toDiscard = this.player.inventory.filter(it => it.rarity === dr.rarity);
-        toDiscard.forEach(it => this.player.removeFromInventory(it.id));
-        if (toDiscard.length > 0) {
-          this._showFloatingMessage(`Discarded ${toDiscard.length} ${dr.rarity} items`, dr.color);
+      tHit.on('pointerover', () => tLabel.setColor('#ffffff'));
+      tHit.on('pointerout', () => tLabel.setColor(tr.color));
+      tHit.on('pointerdown', () => {
+        const items = this.player.inventory.filter(it => it.rarity === tr.rarity);
+        if (items.length > 0) {
+          items.forEach(it => this.player.removeFromInventory(it.id));
+          this._showFloatingMessage(`Trashed ${items.length} ${tr.rarity}`, tr.color);
           this._refreshAll();
         }
       });
+    });
 
-      hit.on('pointerover', () => {
-        label.setColor('#ffffff');
-        // Show a small hint
-        if (!this._discardHint) {
-          this._discardHint = this.add.text(dx + discBtnW / 2, discY - 12, `Discard ${dr.rarity}`, {
-            fontFamily: 'monospace', fontSize: '8px', color: '#ffffff',
-            backgroundColor: '#000000aa', padding: { x: 3, y: 1 },
-          }).setOrigin(0.5).setDepth(10);
-        }
-      });
-      hit.on('pointerout', () => {
-        label.setColor(dr.color);
-        if (this._discardHint) { this._discardHint.destroy(); this._discardHint = null; }
+    // Auto-skip filter row
+    this.add.text(panelX + 14, trashY + trashBtnH + 3, 'Auto-skip:', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#555566',
+    }).setDepth(2);
+
+    if (!this.player.lootFilter) this.player.lootFilter = {};
+    this.filterElements = [];
+
+    trashRarities.forEach((tr, i) => {
+      const fx = trashStartX + i * (trashBtnW + 2);
+      const fy = trashY + trashBtnH + 2;
+      const isSkipped = !!this.player.lootFilter[tr.rarity];
+
+      const fbg = this.add.graphics().setDepth(2);
+      if (isSkipped) {
+        fbg.fillStyle(0x331111, 1);
+        fbg.fillRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+        fbg.lineStyle(1, 0xe94560, 0.6);
+        fbg.strokeRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+      } else {
+        fbg.fillStyle(0x0a0a18, 1);
+        fbg.fillRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+        fbg.lineStyle(1, 0x333344, 0.3);
+        fbg.strokeRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+      }
+      this.filterElements.push(fbg);
+
+      const fLabel = this.add.text(fx + trashBtnW / 2, fy + trashBtnH / 2,
+        isSkipped ? '\u2715' : '\u2014', {
+        fontFamily: 'monospace', fontSize: '8px',
+        color: isSkipped ? '#e94560' : '#333344',
+        fontStyle: isSkipped ? 'bold' : 'normal',
+      }).setOrigin(0.5).setDepth(3);
+      this.filterElements.push(fLabel);
+
+      const fHit = this.add.rectangle(fx + trashBtnW / 2, fy + trashBtnH / 2, trashBtnW, trashBtnH)
+        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+      this.filterElements.push(fHit);
+
+      fHit.on('pointerdown', () => {
+        this.player.lootFilter[tr.rarity] = !this.player.lootFilter[tr.rarity];
+        // Rebuild inventory panel to reflect new filter state
+        this._drawInventoryPanel();
       });
     });
 
@@ -392,7 +427,7 @@ export class UIScene extends Phaser.Scene {
     const panelH = 330;
 
     const padding = 14;
-    const headerHeight = 32;
+    const headerHeight = 55;
     const gap = 4;
     const cellW = Math.floor((panelW - padding * 2 - (INVENTORY_COLS - 1) * gap) / INVENTORY_COLS);
     const cellH = Math.floor((panelH - headerHeight - padding * 2 - (INVENTORY_ROWS - 1) * gap) / INVENTORY_ROWS);
@@ -732,6 +767,11 @@ export class UIScene extends Phaser.Scene {
   _onLootDrop(data) {
     const { item } = data;
 
+    // Auto-skip filtered rarities
+    if (this.player.lootFilter && this.player.lootFilter[item.rarity]) {
+      return; // silently skip this item
+    }
+
     if (!this.player.isInventoryFull()) {
       this.player.addToInventory(item);
       this._refreshAll();
@@ -742,7 +782,7 @@ export class UIScene extends Phaser.Scene {
       const row = Math.floor(idx / INVENTORY_COLS);
       const invPanelH = 330;
       const invPadding = 14;
-      const invHeaderH = 32;
+      const invHeaderH = 55;
       const invGap = 4;
       const cellW = Math.floor((UI_W - invPadding * 2 - (INVENTORY_COLS - 1) * invGap) / INVENTORY_COLS);
       const cellH = Math.floor((invPanelH - invHeaderH - invPadding * 2 - (INVENTORY_ROWS - 1) * invGap) / INVENTORY_ROWS);

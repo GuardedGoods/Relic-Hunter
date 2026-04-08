@@ -87,41 +87,27 @@ export class MainMenuScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(5);
     }
 
-    // ---- Zone selector ----
-    const availableZones = getAvailableZones(this.maxDepth);
-    this.selectedZone = availableZones[0] || ZONES[0];
+    // ---- Zone auto-select (always start in first zone) ----
+    this.selectedZone = ZONES[0];
     this.registry.set('selectedZone', this.selectedZone.id);
 
-    this.add.text(width / 2, 210, 'SELECT ZONE', {
+    // Show current zone info
+    this.add.text(width / 2, 240, `Zone: ${this.selectedZone.name}`, {
       fontFamily: 'monospace',
-      fontSize: '14px',
-      color: '#aaaacc',
+      fontSize: '13px',
+      color: this.selectedZone.color || '#aaaacc',
     }).setOrigin(0.5).setDepth(5);
 
-    const zoneCardWidth = 150;
-    const zoneCardHeight = 70;
-    const zonePadding = 12;
-    const totalZoneWidth = availableZones.length * (zoneCardWidth + zonePadding) - zonePadding;
-    const zoneStartX = width / 2 - totalZoneWidth / 2;
-
-    this.zoneCards = [];
-
-    availableZones.forEach((zone, i) => {
-      const x = zoneStartX + i * (zoneCardWidth + zonePadding);
-      const y = 235;
-      const card = this._createZoneCard(x, y, zoneCardWidth, zoneCardHeight, zone, zone.id === this.selectedZone.id);
-
-      card.hitArea.on('pointerdown', () => {
-        this.selectedZone = zone;
-        this.registry.set('selectedZone', zone.id);
-        this.zoneCards.forEach(c => this._updateZoneCardHighlight(c, c.zoneData.id === zone.id));
-      });
-
-      this.zoneCards.push(card);
-    });
+    if (this.maxDepth > 0) {
+      this.add.text(width / 2, 260, `Best Depth: ${this.maxDepth}`, {
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        color: '#888899',
+      }).setOrigin(0.5).setDepth(5);
+    }
 
     // ---- Buttons ----
-    const btnY = 370;
+    const btnY = 320;
 
     // Start Run button
     this._createButton(width / 2, btnY, 200, 48, 'Start Run', 0xe94560, () => {

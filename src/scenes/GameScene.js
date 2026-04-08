@@ -216,8 +216,10 @@ export class GameScene extends Phaser.Scene {
       this.togglePause();
     });
 
-    // ---- 2x Speed toggle button ----
+    // ---- Speed toggle button (1x → 2x → 4x → 8x) ----
     this.speedMultiplier = 1;
+    this.speedSteps = [1, 2, 4, 8];
+    this.speedIndex = 0;
     const speedBtnW = 60;
     const speedBtnH = 28;
     const speedBtnX = 460;
@@ -234,9 +236,10 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0.001);
 
     speedHit.on('pointerdown', () => {
-      this.speedMultiplier = this.speedMultiplier === 1 ? 2 : 1;
-      this.speedBtnText.setText(this.speedMultiplier === 1 ? '1x' : '2x');
-      this.speedBtnText.setColor(this.speedMultiplier === 2 ? '#f0c040' : '#aaaacc');
+      this.speedIndex = (this.speedIndex + 1) % this.speedSteps.length;
+      this.speedMultiplier = this.speedSteps[this.speedIndex];
+      this.speedBtnText.setText(`${this.speedMultiplier}x`);
+      this.speedBtnText.setColor(this.speedMultiplier > 1 ? '#f0c040' : '#aaaacc');
       this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
     });
 
