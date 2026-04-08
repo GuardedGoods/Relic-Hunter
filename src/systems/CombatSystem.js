@@ -57,12 +57,15 @@ export class CombatSystem {
     /** @type {number} Tracks the depth at which a boss was already spawned */
     this.bossSpawnedAtDepth = -1;
 
-    /** @type {object} Shard Power abilities */
-    this.abilities = {
-      shardBurst: { cooldown: 8000, currentCooldown: 0, name: 'Shard Burst' },
-      threshWard: { cooldown: 15000, currentCooldown: 0, name: "Thresh's Ward", charges: 0 },
-      emberHeal: { cooldown: 12000, currentCooldown: 0, name: 'Ember Heal' },
-    };
+    /** @type {object} Class abilities (loaded from class data at combat start) */
+    this.abilities = {};
+    this.classId = null;
+    this.fury = 0;
+    this.maxFury = 100;
+    this.furyDecayTimer = 0;
+    this.furyDecayDelay = 3000;
+    this.furyDecayRate = 20;
+    this.bleedTargets = []; // for Rend DoT tracking
   }
 
   togglePause() {
@@ -75,26 +78,51 @@ export class CombatSystem {
     const ability = this.abilities[abilityKey];
     if (!ability || ability.currentCooldown > 0) return null;
 
-    ability.currentCooldown = ability.cooldown;
     const stats = this.player.stats || this.player;
+    const attack = stats.attack || 10;
+    const maxHp = stats.maxHealth || 100;
+
+    // Check fury cost (positive = costs fury, negative = generates fury)
+    const furyCost = ability.furyCost || 0;
+    if (furyCost > 0 && this.fury < furyCost) return null; // not enough fury
+
+    // Execute check — only usable on enemies below 30% HP
+    if (abilityKey === 'execute' && this.enemy) {
+      if (this.enemy.health > this.enemy.maxHealth * 0.3) return null;
+    }
+
+    ability.currentCooldown = ability.cooldown;
+
+    // Pay/generate fury
+    if (furyCost > 0) {
+      this.fury = Math.max(0, this.fury - furyCost);
+    } else if (furyCost < 0) {
+      this.fury = Math.min(this.maxFury, this.fury - furyCost); // negative cost = gain
+    }
+    this.furyDecayTimer = 0; // reset decay timer on ability use
 
     switch (abilityKey) {
-      case 'shardBurst': {
-        const damage = Math.round((stats.attack || 10) * 2);
-        if (this.enemy) {
-          this.enemy.health -= damage;
-        }
-        return { type: 'shardBurst', data: { damage, enemyHealth: this.enemy ? Math.max(0, this.enemy.health) : 0 } };
+      case 'cleave': {
+        const damage = Math.round(attack * 1.5);
+        if (this.enemy) this.enemy.health -= damage;
+        return { type: 'cleave', data: { damage, enemyHealth: this.enemy ? Math.max(0, this.enemy.health) : 0 } };
       }
-      case 'threshWard': {
-        this.abilities.threshWard.charges = 3;
-        return { type: 'threshWard', data: { charges: 3 } };
+      case 'rend': {
+        // Apply bleed DoT: 50% ATK over 6 seconds (ticks every 1s)
+        const totalBleedDmg = Math.round(attack * 0.5);
+        const tickDmg = Math.ceil(totalBleedDmg / 6);
+        this.bleedTargets.push({ tickDamage: tickDmg, remainingTicks: 6, tickTimer: 0 });
+        return { type: 'rend', data: { totalDamage: totalBleedDmg, duration: 6 } };
       }
-      case 'emberHeal': {
-        const maxHp = stats.maxHealth || 100;
-        const healAmount = Math.round(maxHp * 0.35);
+      case 'execute': {
+        const damage = Math.round(attack * 3);
+        if (this.enemy) this.enemy.health -= damage;
+        return { type: 'execute', data: { damage, enemyHealth: this.enemy ? Math.max(0, this.enemy.health) : 0 } };
+      }
+      case 'emberVial': {
+        const healAmount = Math.round(maxHp * 0.30);
         this.player.health = Math.min(maxHp, (this.player.health || 0) + healAmount);
-        return { type: 'emberHeal', data: { healAmount, newHealth: this.player.health } };
+        return { type: 'emberVial', data: { healAmount, newHealth: this.player.health } };
       }
       default:
         return null;
@@ -107,7 +135,7 @@ export class CombatSystem {
    * @param {string} zoneId - Zone identifier
    * @param {number} depth - Depth level to fight at
    */
-  startCombat(player, zoneId, depth) {
+  startCombat(player, zoneId, depth, classData = null) {
     this.player = player;
     this.zoneId = zoneId;
     this.depth = depth;
@@ -115,14 +143,36 @@ export class CombatSystem {
     this.playerAttackTimer = 0;
     this.enemyAttackTimer = 0;
     this.zoneModifiers = getZoneModifiers(zoneId);
+    this.enemy = this.spawnEnemy(depth);
 
-    // Reset abilities
+    // Initialize class abilities
+    this.fury = 0;
+    this.bleedTargets = [];
+    if (classData) {
+      this.classData = classData;
+      this.maxFury = classData.resource?.max || 100;
+      this.furyDecayRate = classData.resource?.decay || 20;
+      this.furyDecayDelay = classData.resource?.decayDelay || 3000;
+      this.abilities = {};
+      for (const ab of classData.abilities) {
+        this.abilities[ab.key] = {
+          ...ab,
+          currentCooldown: 0,
+          charges: 0,
+        };
+      }
+      // Add universal Ember Vial heal (available to all classes)
+      this.abilities.emberVial = {
+        key: 'emberVial', name: 'Ember Vial', icon: '🧪', hotkey: 'R',
+        cooldown: 15000, currentCooldown: 0, furyCost: 0,
+        description: 'Restore 30% of max HP.\nAvailable to all classes.', color: 0x60a5fa,
+      };
+    }
+
+    // Reset ability cooldowns
     for (const ability of Object.values(this.abilities)) {
       ability.currentCooldown = 0;
     }
-    if (this.abilities.threshWard) this.abilities.threshWard.charges = 0;
-
-    this.enemy = this.spawnEnemy(depth);
   }
 
   /**
@@ -242,12 +292,6 @@ export class CombatSystem {
    * @returns {{ damage: number }}
    */
   processEnemyAttack(enemy, player) {
-    // Check Thresh's Ward
-    if (this.abilities.threshWard.charges > 0) {
-      this.abilities.threshWard.charges--;
-      return { damage: 0, blocked: true };
-    }
-
     const stats = player.stats || player;
     const defense = stats.defense || 0;
 
@@ -312,7 +356,30 @@ export class CombatSystem {
       }
     }
 
+    // Fury decay (decays at furyDecayRate per second after furyDecayDelay of no combat)
+    this.furyDecayTimer += deltaMs;
+    if (this.furyDecayTimer >= this.furyDecayDelay && this.fury > 0) {
+      this.fury = Math.max(0, this.fury - this.furyDecayRate * (deltaMs / 1000));
+    }
+
     const events = [];
+
+    // Process bleed DoTs
+    for (let i = this.bleedTargets.length - 1; i >= 0; i--) {
+      const bleed = this.bleedTargets[i];
+      bleed.tickTimer += deltaMs;
+      if (bleed.tickTimer >= 1000) {
+        bleed.tickTimer -= 1000;
+        bleed.remainingTicks--;
+        if (this.enemy && this.enemy.health > 0) {
+          this.enemy.health -= bleed.tickDamage;
+          events.push({ type: 'bleedTick', data: { damage: bleed.tickDamage } });
+        }
+        if (bleed.remainingTicks <= 0) {
+          this.bleedTargets.splice(i, 1);
+        }
+      }
+    }
 
     // --- Player attacks ---
     const attackInterval = 1000 / (this.player.stats?.attackSpeed || this.player.attackSpeed || 1);
@@ -328,6 +395,10 @@ export class CombatSystem {
         type: 'playerAttack',
         data: { damage, isCrit, enemyHealthRemaining: Math.max(0, this.enemy.health) },
       });
+
+      // Generate fury from attacking
+      this.fury = Math.min(this.maxFury, this.fury + 12);
+      this.furyDecayTimer = 0;
 
       // Check enemy death
       if (this.enemy.health <= 0) {
@@ -362,6 +433,9 @@ export class CombatSystem {
           }
         }
 
+        // Clear bleeds on enemy death
+        this.bleedTargets = [];
+
         // Check if we should spawn a boss at this depth
         const isBossDepth = this.depth > 0 && this.depth % BOSS_DEPTH_INTERVAL === 0;
         const bossNotYetSpawned = this.bossSpawnedAtDepth !== this.depth;
@@ -390,6 +464,10 @@ export class CombatSystem {
         type: 'enemyAttack',
         data: { damage, playerHealthRemaining: this.player.health },
       });
+
+      // Fury from taking damage
+      this.fury = Math.min(this.maxFury, this.fury + 6);
+      this.furyDecayTimer = 0;
 
       if (this.player.health <= 0) {
         this.active = false;

@@ -4,6 +4,7 @@ import { CombatSystem } from '../systems/CombatSystem.js';
 import { EmberStormSystem } from '../systems/EmberStormSystem.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { RARITY_COLORS, ZONES } from '../data/constants.js';
+import { CLASSES } from '../data/classes.js';
 
 // Combat area layout constants
 const COMBAT_W = 680;
@@ -17,6 +18,8 @@ export class GameScene extends Phaser.Scene {
   init(data) {
     this.zoneData = data.zone || ZONES[0];
     this.saveData = data.saveData || null;
+    this.classId = data.classId || 'slayer';
+    this.classData = CLASSES[this.classId] || CLASSES.slayer;
   }
 
   create() {
@@ -41,6 +44,8 @@ export class GameScene extends Phaser.Scene {
     this.player.dropRateBonus = stats.dropRateBonus || 0;
     this.player.attackSpeed = stats.attackSpeed || 1;
 
+    if (!this.player.talentPoints) this.player.talentPoints = {};
+
     // Run stats tracking
     this.runStats = {
       enemiesKilled: 0,
@@ -59,7 +64,7 @@ export class GameScene extends Phaser.Scene {
 
     // ---- Combat system ----
     this.combatSystem = new CombatSystem();
-    this.combatSystem.startCombat(this.player, this.zoneData.id, this.currentDepth);
+    this.combatSystem.startCombat(this.player, this.zoneData.id, this.currentDepth, this.classData);
 
     // ---- Ember Storm system ----
     this.emberStorm = new EmberStormSystem();
@@ -111,6 +116,22 @@ export class GameScene extends Phaser.Scene {
       fontFamily: 'monospace', fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
     this._updateProgressBar();
+
+    // ---- Fury Resource Bar ----
+    const furyBarX = 20;
+    const furyBarY = 98;
+    const furyBarW = COMBAT_W - 40;
+    const furyBarH = 10;
+    this.furyBarBg = this.add.graphics().setDepth(2);
+    this.furyBarBg.fillStyle(0x0a0a18, 1);
+    this.furyBarBg.fillRoundedRect(furyBarX, furyBarY, furyBarW, furyBarH, 3);
+    this.furyBarBg.lineStyle(1, 0x333355, 0.5);
+    this.furyBarBg.strokeRoundedRect(furyBarX, furyBarY, furyBarW, furyBarH, 3);
+
+    this.furyBarFill = this.add.graphics().setDepth(3);
+    this.furyBarLabel = this.add.text(furyBarX + 4, furyBarY, `${this.classData.resource.name}: 0/${this.classData.resource.max}`, {
+      fontFamily: 'monospace', fontSize: '8px', color: this.classData.resource.color || '#e94560',
+    }).setDepth(4);
 
     // Ember Storm indicator (hidden initially)
     this.stormOverlay = this.add.graphics().setDepth(1).setAlpha(0);
@@ -269,17 +290,60 @@ export class GameScene extends Phaser.Scene {
       this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
     });
 
-    // ---- Shard Powers Hotbar (WoW-style) ----
+    // ---- Talent Tree button ----
+    const talentBtnW = 70;
+    const talentBtnH = 28;
+    const talentBtnX = 60;
+    const talentBtnY = height - 30;
+    const talentBg = this.add.graphics().setDepth(8);
+    talentBg.fillStyle(0x16213e, 1);
+    talentBg.fillRoundedRect(talentBtnX - talentBtnW / 2, talentBtnY - talentBtnH / 2, talentBtnW, talentBtnH, 6);
+    talentBg.lineStyle(1, 0xf0c040, 0.6);
+    talentBg.strokeRoundedRect(talentBtnX - talentBtnW / 2, talentBtnY - talentBtnH / 2, talentBtnW, talentBtnH, 6);
+
+    this.add.text(talentBtnX, talentBtnY, 'T: Talents', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#f0c040',
+    }).setOrigin(0.5).setDepth(9);
+
+    const talentHit = this.add.rectangle(talentBtnX, talentBtnY, talentBtnW, talentBtnH)
+      .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(10);
+    talentHit.on('pointerdown', () => this._showTalentTree());
+
+    this.input.keyboard.on('keydown-T', () => this._showTalentTree());
+
+    // ---- Class Ability Hotbar ----
     this.abilityButtons = {};
     this.abilityTooltip = null;
-    const abilityDefs = [
-      { key: 'shardBurst', icon: '🔥', hotkey: 'Q', color: 0xf97316, borderColor: 0xcc5500, textColor: '#f97316',
-        name: 'Shard Burst', desc: 'Deal 200% ATK damage\nto the current enemy.', cd: '8s' },
-      { key: 'threshWard', icon: '🛡', hotkey: 'W', color: 0x4ade80, borderColor: 0x228844, textColor: '#4ade80',
-        name: "Thresh's Ward", desc: 'Block the next 3\nenemy attacks.', cd: '15s' },
-      { key: 'emberHeal', icon: '💎', hotkey: 'E', color: 0x60a5fa, borderColor: 0x3366aa, textColor: '#60a5fa',
-        name: 'Ember Heal', desc: 'Restore 35% of\nyour max HP.', cd: '12s' },
-    ];
+
+    // Build ability defs from class data + universal Ember Vial
+    const classAbilities = this.classData.abilities.map(ab => ({
+      key: ab.key,
+      icon: ab.icon,
+      hotkey: ab.hotkey,
+      color: ab.color,
+      borderColor: ab.color,
+      textColor: typeof ab.color === 'number' ? '#' + ab.color.toString(16).padStart(6, '0') : ab.color,
+      name: ab.name,
+      desc: ab.description,
+      cd: (ab.cooldown / 1000) + 's',
+      furyCost: ab.furyCost,
+    }));
+
+    // Add universal Ember Vial heal
+    classAbilities.push({
+      key: 'emberVial',
+      icon: '🧪',
+      hotkey: 'R',
+      color: 0x60a5fa,
+      borderColor: 0x3366aa,
+      textColor: '#60a5fa',
+      name: 'Ember Vial',
+      desc: 'Restore 30% of max HP.\nAll classes. 15s cooldown.',
+      cd: '15s',
+      furyCost: 0,
+    });
+
+    const abilityDefs = classAbilities;
 
     const abSize = 52;
     const abGap = 6;
@@ -406,6 +470,16 @@ export class GameScene extends Phaser.Scene {
         case 'levelUp':
           this._onLevelUp(event.data);
           break;
+        case 'bleedTick':
+          this._spawnDamageNumber(
+            this.enemyX + Phaser.Math.Between(-15, 15),
+            this.enemyY - 60,
+            `${event.data.damage}`,
+            '#ff4444',
+            '11px'
+          );
+          this._updateEnemyDisplay();
+          break;
       }
     }
 
@@ -423,6 +497,9 @@ export class GameScene extends Phaser.Scene {
 
     // Update depth progress bar
     this._updateProgressBar();
+
+    // Update fury bar
+    this._updateFuryBar();
 
     // Ember Storm tick
     if (this.emberStorm.active) {
@@ -1339,25 +1416,30 @@ export class GameScene extends Phaser.Scene {
   _useAbility(abilityKey) {
     if (this.isPaused || !this.combatSystem.active) return;
     const result = this.combatSystem.useAbility(abilityKey);
-    if (!result) return; // On cooldown or inactive
+    if (!result) return;
 
     switch (result.type) {
-      case 'shardBurst':
-        // Orange flash + damage number
-        this.cameras.main.flash(150, 249, 115, 22, true);
-        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `BURST ${result.data.damage}`, '#f97316', '18px');
+      case 'cleave':
+        this.cameras.main.flash(100, 200, 50, 50, true);
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `CLEAVE ${result.data.damage}`, '#e94560', '18px');
         this._updateEnemyDisplay();
-        this._addCombatLog('Shard Burst!', '#f97316');
+        this._addCombatLog('Cleave!', '#e94560');
         break;
-      case 'threshWard':
-        this._spawnDamageNumber(this.playerX, this.playerY - 80, 'WARD x3', '#4ade80', '16px');
-        this._addCombatLog("Thresh's Ward activated!", '#4ade80');
+      case 'rend':
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `REND (bleed)`, '#ff4444', '16px');
+        this._addCombatLog('Rend! Bleeding...', '#ff4444');
         break;
-      case 'emberHeal':
+      case 'execute':
+        this.cameras.main.flash(200, 150, 20, 20, true);
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `EXECUTE ${result.data.damage}`, '#aa0000', '20px');
+        this._updateEnemyDisplay();
+        this._addCombatLog('Execute!', '#aa0000');
+        break;
+      case 'emberVial':
         this._spawnDamageNumber(this.playerX, this.playerY - 80, `+${result.data.healAmount} HP`, '#60a5fa', '16px');
         this._updatePlayerHealthBar();
         this.events.emit('playerHealthChanged', { health: this.player.health, maxHealth: this.player.stats.maxHealth });
-        this._addCombatLog('Ember Heal!', '#60a5fa');
+        this._addCombatLog('Ember Vial!', '#60a5fa');
         break;
     }
   }
@@ -1371,7 +1453,6 @@ export class GameScene extends Phaser.Scene {
       const cdRatio = ab.currentCooldown / ab.cooldown;
       btn.cdOverlay.clear();
       if (cdRatio > 0) {
-        // Dark sweep overlay covering the icon proportionally
         btn.cdOverlay.fillStyle(0x000000, 1);
         btn.cdOverlay.fillRoundedRect(btn.x, btn.y, btn.w, btn.h * cdRatio, 4);
         btn.cdText.setText(Math.ceil(ab.currentCooldown / 1000)).setVisible(true);
@@ -1380,16 +1461,10 @@ export class GameScene extends Phaser.Scene {
         btn.cdText.setVisible(false);
         btn.icon.setAlpha(1);
       }
-    }
 
-    // Show ward charges indicator below the icon
-    const ward = this.combatSystem.abilities.threshWard;
-    const wardBtn = this.abilityButtons.threshWard;
-    if (wardBtn) {
-      if (ward && ward.charges > 0) {
-        wardBtn.nameLabel.setText(`${ward.charges}`).setColor('#4ade80');
-      } else {
-        wardBtn.nameLabel.setText('').setColor('#888899');
+      // Show fury cost requirement (dim if not enough fury)
+      if (ab.furyCost > 0 && this.combatSystem.fury < ab.furyCost) {
+        btn.icon.setAlpha(Math.max(btn.icon.alpha, 0.3));
       }
     }
   }
@@ -1417,6 +1492,11 @@ export class GameScene extends Phaser.Scene {
 
     container.add(this.add.text(ttX + 8, ttY + 24, def.desc, {
       fontFamily: 'monospace', fontSize: '10px', color: '#ccccdd', lineSpacing: 2,
+    }));
+
+    const costText = def.furyCost > 0 ? `Cost: ${def.furyCost} Fury` : (def.furyCost < 0 ? `Generates: ${Math.abs(def.furyCost)} Fury` : 'Free');
+    container.add(this.add.text(ttX + 8, ttY + ttH - 26, costText, {
+      fontFamily: 'monospace', fontSize: '9px', color: '#aaaacc',
     }));
 
     container.add(this.add.text(ttX + ttW - 8, ttY + ttH - 14, `CD: ${def.cd}`, {
@@ -1530,5 +1610,98 @@ export class GameScene extends Phaser.Scene {
   _rarityIndex(rarity) {
     const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
     return order.indexOf(rarity);
+  }
+
+  _showTalentTree() {
+    if (this.talentPanel) { this._closeTalentTree(); return; }
+    if (!this.isPaused) this.togglePause();
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const container = this.add.container(0, 0).setDepth(60);
+    this.talentPanel = container;
+    const backdrop = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.8).setInteractive();
+    container.add(backdrop);
+    backdrop.on('pointerdown', () => this._closeTalentTree());
+    const pw = 700, ph = 500;
+    const px = w / 2 - pw / 2, py = h / 2 - ph / 2;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1e, 0.98);
+    bg.fillRoundedRect(px, py, pw, ph, 10);
+    bg.lineStyle(2, 0xf0c040, 0.8);
+    bg.strokeRoundedRect(px, py, pw, ph, 10);
+    container.add(bg);
+    const talentPoints = Math.max(0, (this.player.level || 1) - 1);
+    if (!this.player.talentPoints) this.player.talentPoints = {};
+    const spentPoints = this.player.talentPoints;
+    const totalSpent = Object.values(spentPoints).reduce((s, v) => s + v, 0);
+    const available = talentPoints - totalSpent;
+    container.add(this.add.text(w / 2, py + 20, `TALENT TREES — ${this.classData.name}`, {
+      fontFamily: 'monospace', fontSize: '16px', color: '#f0c040', fontStyle: 'bold',
+    }).setOrigin(0.5));
+    container.add(this.add.text(w / 2, py + 42, `Available Points: ${available}  (1 per level)`, {
+      fontFamily: 'monospace', fontSize: '11px', color: available > 0 ? '#4ade80' : '#888899',
+    }).setOrigin(0.5));
+    const trees = Object.entries(this.classData.talents);
+    const treeW = 200, treeGap = 20;
+    const treeStartX = px + (pw - trees.length * treeW - (trees.length - 1) * treeGap) / 2;
+    const treeY = py + 70;
+    trees.forEach(([, tree], treeIdx) => {
+      const tx = treeStartX + treeIdx * (treeW + treeGap);
+      container.add(this.add.text(tx + treeW / 2, treeY, `${tree.icon} ${tree.name}`, {
+        fontFamily: 'monospace', fontSize: '12px', color: tree.color, fontStyle: 'bold',
+      }).setOrigin(0.5));
+      container.add(this.add.text(tx + treeW / 2, treeY + 18, tree.description, {
+        fontFamily: 'monospace', fontSize: '7px', color: '#888899', wordWrap: { width: treeW - 10 },
+      }).setOrigin(0.5, 0));
+      const pointsInTree = tree.tiers.reduce((s, t) => s + (spentPoints[t.id] || 0), 0);
+      tree.tiers.forEach((talent, tierIdx) => {
+        const ny = treeY + 55 + tierIdx * 70;
+        const allocated = spentPoints[talent.id] || 0;
+        const unlocked = tierIdx === 0 || pointsInTree >= tierIdx;
+        const canAllocate = available > 0 && allocated < talent.maxPoints && unlocked;
+        const nodeColor = allocated > 0 ? Phaser.Display.Color.HexStringToColor(tree.color).color : (canAllocate ? 0x333355 : 0x1a1a2e);
+        const borderColor = allocated > 0 ? Phaser.Display.Color.HexStringToColor(tree.color).color : (canAllocate ? 0x555577 : 0x222233);
+        const nodeG = this.add.graphics();
+        nodeG.fillStyle(nodeColor, allocated > 0 ? 0.4 : 0.8);
+        nodeG.fillRoundedRect(tx + 10, ny, treeW - 20, 58, 5);
+        nodeG.lineStyle(1, borderColor, 1);
+        nodeG.strokeRoundedRect(tx + 10, ny, treeW - 20, 58, 5);
+        container.add(nodeG);
+        container.add(this.add.text(tx + treeW / 2, ny + 8, talent.name, {
+          fontFamily: 'monospace', fontSize: '10px', color: allocated > 0 ? tree.color : '#aaaacc', fontStyle: 'bold',
+        }).setOrigin(0.5));
+        container.add(this.add.text(tx + treeW / 2, ny + 22, talent.description, {
+          fontFamily: 'monospace', fontSize: '7px', color: '#888899', wordWrap: { width: treeW - 40 },
+        }).setOrigin(0.5, 0));
+        container.add(this.add.text(tx + treeW - 16, ny + 4, `${allocated}/${talent.maxPoints}`, {
+          fontFamily: 'monospace', fontSize: '8px', color: allocated > 0 ? '#4ade80' : '#555566',
+        }).setOrigin(1, 0));
+        if (canAllocate) {
+          const hit = this.add.rectangle(tx + treeW / 2, ny + 29, treeW - 20, 58)
+            .setInteractive({ useHandCursor: true }).setAlpha(0.001);
+          container.add(hit);
+          hit.on('pointerdown', () => {
+            this.player.talentPoints[talent.id] = (this.player.talentPoints[talent.id] || 0) + 1;
+            this._closeTalentTree();
+            this._showTalentTree();
+          });
+        }
+        if (tierIdx < tree.tiers.length - 1) {
+          const ln = this.add.graphics();
+          ln.lineStyle(1, borderColor, 0.5);
+          ln.lineBetween(tx + treeW / 2, ny + 58, tx + treeW / 2, ny + 70);
+          container.add(ln);
+        }
+      });
+    });
+    const closeText = this.add.text(px + pw - 15, py + 8, '✕', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#e94560', fontStyle: 'bold',
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+    container.add(closeText);
+    closeText.on('pointerdown', () => this._closeTalentTree());
+  }
+
+  _closeTalentTree() {
+    if (this.talentPanel) { this.talentPanel.destroy(); this.talentPanel = null; }
   }
 }
