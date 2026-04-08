@@ -5,6 +5,8 @@ import {
   ENEMY_HEALTH_SCALE,
   ENEMY_DAMAGE_SCALE,
   RARITY,
+  LOOT_DROP_CHANCE,
+  ELITE_LOOT_DROP_CHANCE,
 } from '../data/constants.js';
 import { generateItem, rollRarity } from './LootSystem.js';
 import { getEnemyNames, getZoneModifiers } from './ZoneSystem.js';
@@ -26,17 +28,24 @@ export class CombatSystem {
     /** @type {object|null} Current enemy */
     this.enemy = null;
     /** @type {string} Active zone id */
-    this.zoneId = 'crypt';
+    this.zoneId = 'ashveil';
     /** @type {number} Current depth in the zone */
     this.depth = 0;
     /** @type {boolean} Whether combat is active */
     this.active = false;
+    /** @type {boolean} Whether combat is paused */
+    this.paused = false;
     /** @type {number} Accumulated time since last player attack (ms) */
     this.playerAttackTimer = 0;
     /** @type {number} Accumulated time since last enemy attack (ms) */
     this.enemyAttackTimer = 0;
     /** @type {object} Zone modifiers cached for the active zone */
     this.zoneModifiers = {};
+  }
+
+  togglePause() {
+    this.paused = !this.paused;
+    return this.paused;
   }
 
   /**
@@ -182,6 +191,7 @@ export class CombatSystem {
    */
   tick(deltaMs) {
     if (!this.active || !this.player || !this.enemy) return [];
+    if (this.paused) return [];
 
     const events = [];
 
@@ -208,12 +218,15 @@ export class CombatSystem {
           data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite },
         });
 
-        // Drop loot
-        const loot = this.dropLoot(this.depth);
-        events.push({
-          type: 'lootDrop',
-          data: { item: loot },
-        });
+        // Drop loot (chance-based, elites always drop)
+        const dropChance = this.enemy.isElite ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
+        if (Math.random() < dropChance) {
+          const loot = this.dropLoot(this.depth);
+          events.push({
+            type: 'lootDrop',
+            data: { item: loot },
+          });
+        }
 
         // Check for level-up (simple XP: 10 + depth * 2 per kill)
         if (this.player.xp !== undefined && this.player.xpToLevel !== undefined) {

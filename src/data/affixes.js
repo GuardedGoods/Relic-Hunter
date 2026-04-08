@@ -35,19 +35,19 @@ export const SLOT_AFFIX_WEIGHTS = {
 
 // Item name prefixes by element/theme
 export const NAME_PREFIXES = {
-  fire: ['Blazing', 'Scorching', 'Infernal', 'Molten', 'Ashen'],
-  ice: ['Frozen', 'Glacial', 'Frostbitten', 'Chilling', 'Arctic'],
-  poison: ['Venomous', 'Toxic', 'Blighted', 'Noxious', 'Virulent'],
-  crit: ['Precise', 'Deadly', 'Keen', 'Ruthless', 'Savage'],
-  defense: ['Stalwart', 'Fortified', 'Ironclad', 'Unyielding', 'Bulwark'],
-  neutral: ['Ancient', 'Runed', 'Mystic', 'Enchanted', 'Arcane'],
+  fire: ['Pyrevast\'s', 'Emberclave', 'Ashen', 'Molten', 'Forgeborn'],
+  ice: ['Aeveth\'s', 'Stillwater', 'Frostbitten', 'Rimwall', 'Glacial'],
+  poison: ['Solenne\'s', 'Blighted', 'Thornwatch', 'Overgrowth', 'Virulent'],
+  crit: ['Vorryn\'s', 'Unmade', 'Keen', 'Ruthless', 'Entropy'],
+  defense: ['Warden\'s', 'Irongrip', 'Stonekith', 'Copperhold', 'Bulwark'],
+  neutral: ['Ancient', 'Runed', 'Sevenforge', 'Erethian', 'Ashfall'],
 };
 
 export const BASE_ITEM_NAMES = {
-  weapon: ['Sword', 'Axe', 'Mace', 'Dagger', 'Staff'],
-  helmet: ['Helm', 'Crown', 'Hood', 'Circlet', 'Visor'],
-  chest: ['Plate', 'Robe', 'Vest', 'Hauberk', 'Cuirass'],
-  gloves: ['Gauntlets', 'Grips', 'Wraps', 'Mitts', 'Bracers'],
-  boots: ['Greaves', 'Treads', 'Sabatons', 'Walkers', 'Striders'],
-  ring: ['Ring', 'Band', 'Loop', 'Signet', 'Circle'],
+  weapon: ['Blade', 'Waraxe', 'Mace', 'Shard-Dagger', 'Ember Staff'],
+  helmet: ['Ward-Helm', 'Crown', 'Veil Hood', 'Circlet', 'Visor'],
+  chest: ['Veil Plate', 'Ashweave Robe', 'Forge Vest', 'Hauberk', 'Cuirass'],
+  gloves: ['Gauntlets', 'Ward-Grips', 'Ember Wraps', 'Mitts', 'Bracers'],
+  boots: ['Greaves', 'Ashwalkers', 'Sabatons', 'Thornwood Treads', 'Striders'],
+  ring: ['Shard Ring', 'Ember Band', 'Veil Loop', 'Calmor Signet', 'Thresh Circle'],
 };
