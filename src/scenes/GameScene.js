@@ -228,6 +228,53 @@ export class GameScene extends Phaser.Scene {
       this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
     });
 
+    // ---- Shard Powers (ability bar) ----
+    this.abilityButtons = {};
+    const abilityDefs = [
+      { key: 'shardBurst', label: 'Q: Shard Burst', hotkey: 'Q', color: 0xf97316, textColor: '#f97316' },
+      { key: 'threshWard', label: "W: Thresh's Ward", hotkey: 'W', color: 0x4ade80, textColor: '#4ade80' },
+      { key: 'emberHeal', label: 'E: Ember Heal', hotkey: 'E', color: 0x60a5fa, textColor: '#60a5fa' },
+    ];
+
+    const abBarY = height - 70;
+    const abBtnW = 140;
+    const abBtnH = 28;
+    const abStartX = 30;
+    const abGap = 8;
+
+    abilityDefs.forEach((def, i) => {
+      const ax = abStartX + i * (abBtnW + abGap);
+
+      const bg = this.add.graphics().setDepth(8);
+      bg.fillStyle(0x16213e, 1);
+      bg.fillRoundedRect(ax, abBarY, abBtnW, abBtnH, 5);
+      bg.lineStyle(1, def.color, 0.8);
+      bg.strokeRoundedRect(ax, abBarY, abBtnW, abBtnH, 5);
+
+      const label = this.add.text(ax + abBtnW / 2, abBarY + abBtnH / 2, def.label, {
+        fontFamily: 'monospace', fontSize: '10px', color: def.textColor, fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(9);
+
+      // Cooldown overlay (fills from left, semi-transparent dark)
+      const cdOverlay = this.add.graphics().setDepth(9).setAlpha(0.6);
+
+      // Cooldown text
+      const cdText = this.add.text(ax + abBtnW / 2, abBarY + abBtnH / 2, '', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(10).setVisible(false);
+
+      const hitArea = this.add.rectangle(ax + abBtnW / 2, abBarY + abBtnH / 2, abBtnW, abBtnH)
+        .setInteractive({ useHandCursor: true })
+        .setAlpha(0.001).setDepth(11);
+
+      hitArea.on('pointerdown', () => this._useAbility(def.key));
+
+      this.abilityButtons[def.key] = { bg, label, cdOverlay, cdText, x: ax, y: abBarY, w: abBtnW, h: abBtnH, color: def.color };
+
+      // Keyboard hotkey
+      this.input.keyboard.on(`keydown-${def.hotkey}`, () => this._useAbility(def.key));
+    });
+
     // ---- Auto-save timer ----
     this.autoSaveTimer = 0;
 
@@ -279,6 +326,9 @@ export class GameScene extends Phaser.Scene {
     // Update health bars
     this._updatePlayerHealthBar();
 
+    // Update ability cooldown displays
+    this._updateAbilityBar();
+
     // Auto-save every 30 seconds
     this.autoSaveTimer += delta;
     if (this.autoSaveTimer >= 30000) {
@@ -314,26 +364,32 @@ export class GameScene extends Phaser.Scene {
     const enemy = this.combatSystem.enemy;
     if (!enemy) return;
 
-    const baseColor = enemy.isElite ? 0xf97316 : 0xe94560;
-    const outlineColor = enemy.isElite ? 0xcc5500 : 0xbb2244;
+    const isBoss = enemy.isBoss || false;
+    const scale = isBoss ? 1.4 : 1;
+    const baseColor = isBoss ? 0xffdd44 : (enemy.isElite ? 0xf97316 : 0xe94560);
+    const outlineColor = isBoss ? 0xcc9900 : (enemy.isElite ? 0xcc5500 : 0xbb2244);
+
+    const bw = 50 * scale;
+    const bh = 70 * scale;
+    const headR = 14 * scale;
 
     // Body
     g.fillStyle(baseColor, 1);
-    g.fillRect(this.enemyX - 25, this.enemyY - 35, 50, 70);
+    g.fillRect(this.enemyX - bw / 2, this.enemyY - bh / 2, bw, bh);
     g.lineStyle(2, outlineColor, 1);
-    g.strokeRect(this.enemyX - 25, this.enemyY - 35, 50, 70);
+    g.strokeRect(this.enemyX - bw / 2, this.enemyY - bh / 2, bw, bh);
     // Head
     g.fillStyle(baseColor, 0.8);
-    g.fillCircle(this.enemyX, this.enemyY - 45, 14);
+    g.fillCircle(this.enemyX, this.enemyY - bh / 2 - headR + 2, headR);
     g.lineStyle(1, outlineColor, 1);
-    g.strokeCircle(this.enemyX, this.enemyY - 45, 14);
-    // Eyes (menacing dots)
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(this.enemyX - 5, this.enemyY - 47, 3);
-    g.fillCircle(this.enemyX + 5, this.enemyY - 47, 3);
+    g.strokeCircle(this.enemyX, this.enemyY - bh / 2 - headR + 2, headR);
+    // Eyes
+    g.fillStyle(isBoss ? 0xff0000 : 0xffffff, 1);
+    g.fillCircle(this.enemyX - 5 * scale, this.enemyY - bh / 2 - headR, 3 * scale);
+    g.fillCircle(this.enemyX + 5 * scale, this.enemyY - bh / 2 - headR, 3 * scale);
     g.fillStyle(0x000000, 1);
-    g.fillCircle(this.enemyX - 5, this.enemyY - 47, 1.5);
-    g.fillCircle(this.enemyX + 5, this.enemyY - 47, 1.5);
+    g.fillCircle(this.enemyX - 5 * scale, this.enemyY - bh / 2 - headR, 1.5 * scale);
+    g.fillCircle(this.enemyX + 5 * scale, this.enemyY - bh / 2 - headR, 1.5 * scale);
   }
 
   _updatePlayerHealthBar() {
@@ -367,7 +423,13 @@ export class GameScene extends Phaser.Scene {
     if (!enemy) return;
 
     this.enemyNameLabel.setText(enemy.name);
-    this.eliteBadge.setVisible(enemy.isElite);
+    if (enemy.isBoss) {
+      this.eliteBadge.setText('BOSS').setVisible(true);
+      this.eliteBadge.setColor('#ffdd44').setBackgroundColor('#4a3500');
+    } else {
+      this.eliteBadge.setText('ELITE').setVisible(enemy.isElite);
+      this.eliteBadge.setColor('#f97316').setBackgroundColor('#3a1a00');
+    }
 
     const maxHp = enemy.maxHealth || 1;
     const curHp = Math.max(0, enemy.health || 0);
@@ -422,7 +484,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   _onEnemyAttack(data) {
-    const { damage } = data;
+    const { damage, blocked, isCharged } = data;
+
+    if (blocked) {
+      // Ward blocked the attack
+      this._spawnDamageNumber(this.playerX, this.playerY - 60, 'BLOCKED', '#4ade80', '14px');
+      this._addCombatLog('Ward blocked an attack!', '#4ade80');
+      return;
+    }
+
+    // Boss charged attack extra feedback
+    if (isCharged) {
+      this.cameras.main.shake(200, 0.015);
+      this._spawnDamageNumber(this.playerX, this.playerY - 80, 'CHARGED!', '#ff4444', '16px');
+    }
 
     // Flash player
     this.playerGfx.setAlpha(0.4);
@@ -452,7 +527,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _onEnemyDeath(data) {
-    const { gold, isElite, enemyName } = data;
+    const { gold, isElite, enemyName, isBoss } = data;
 
     this.runStats.enemiesKilled++;
     this.killCountLabel.setText(`Kills: ${this.runStats.enemiesKilled}`);
@@ -511,6 +586,24 @@ export class GameScene extends Phaser.Scene {
 
     // Add combat log entry
     this._addCombatLog(`${enemyName} slain! +${actualGold}g`, isElite ? '#f97316' : '#4ade80');
+
+    // Boss defeat celebration
+    if (isBoss) {
+      this._addCombatLog(`BOSS DEFEATED: ${enemyName}!`, '#ffdd44');
+      // Screen flash gold
+      this.cameras.main.flash(300, 255, 200, 50);
+      // Victory text
+      const bossText = this.add.text(250, 200, 'BOSS DEFEATED!', {
+        fontFamily: 'monospace', fontSize: '24px', color: '#ffdd44', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(20).setAlpha(0);
+      bossText.setShadow(0, 0, '#f97316', 8, true, true);
+      this.tweens.add({
+        targets: bossText, alpha: 1, y: 170, duration: 400, hold: 1200,
+        onComplete: () => {
+          this.tweens.add({ targets: bossText, alpha: 0, y: 140, duration: 400, onComplete: () => bossText.destroy() });
+        },
+      });
+    }
   }
 
   _onLootDrop(data) {
@@ -747,6 +840,66 @@ export class GameScene extends Phaser.Scene {
       this.runStats.died = false;
       this._endRun();
     });
+  }
+
+  // ---- Shard Powers ----
+
+  _useAbility(abilityKey) {
+    if (this.isPaused || !this.combatSystem.active) return;
+    const result = this.combatSystem.useAbility(abilityKey);
+    if (!result) return; // On cooldown or inactive
+
+    switch (result.type) {
+      case 'shardBurst':
+        // Orange flash + damage number
+        this.cameras.main.flash(150, 249, 115, 22, true);
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `BURST ${result.data.damage}`, '#f97316', '18px');
+        this._updateEnemyDisplay();
+        this._addCombatLog('Shard Burst!', '#f97316');
+        break;
+      case 'threshWard':
+        this._spawnDamageNumber(this.playerX, this.playerY - 80, 'WARD x3', '#4ade80', '16px');
+        this._addCombatLog("Thresh's Ward activated!", '#4ade80');
+        break;
+      case 'emberHeal':
+        this._spawnDamageNumber(this.playerX, this.playerY - 80, `+${result.data.healAmount} HP`, '#60a5fa', '16px');
+        this._updatePlayerHealthBar();
+        this.events.emit('playerHealthChanged', { health: this.player.health, maxHealth: this.player.stats.maxHealth });
+        this._addCombatLog('Ember Heal!', '#60a5fa');
+        break;
+    }
+  }
+
+  _updateAbilityBar() {
+    if (!this.combatSystem || !this.combatSystem.abilities) return;
+    for (const [key, ab] of Object.entries(this.combatSystem.abilities)) {
+      const btn = this.abilityButtons[key];
+      if (!btn) continue;
+
+      const cdRatio = ab.currentCooldown / ab.cooldown;
+      btn.cdOverlay.clear();
+      if (cdRatio > 0) {
+        btn.cdOverlay.fillStyle(0x000000, 1);
+        btn.cdOverlay.fillRoundedRect(btn.x, btn.y, btn.w * cdRatio, btn.h, 5);
+        btn.cdText.setText(Math.ceil(ab.currentCooldown / 1000) + 's').setVisible(true);
+        btn.label.setAlpha(0.4);
+      } else {
+        btn.cdText.setVisible(false);
+        btn.label.setAlpha(1);
+      }
+    }
+
+    // Show ward charges indicator
+    const ward = this.combatSystem.abilities.threshWard;
+    if (ward && ward.charges > 0) {
+      const btn = this.abilityButtons.threshWard;
+      if (btn) {
+        btn.label.setText(`W: Ward [${ward.charges}]`);
+      }
+    } else {
+      const btn = this.abilityButtons.threshWard;
+      if (btn) btn.label.setText("W: Thresh's Ward");
+    }
   }
 
   // ---- Pause / manage gear ----

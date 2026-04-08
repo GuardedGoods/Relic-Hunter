@@ -11,6 +11,17 @@ import {
 import { generateItem, rollRarity } from './LootSystem.js';
 import { getEnemyNames, getZoneModifiers } from './ZoneSystem.js';
 
+const BOSS_NAMES = {
+  ashveil: ['The Barrow Warden', 'Threefang Alpha', "Maren's Shade", 'The Deepest Shambler'],
+  embersteppe: ['The Breach Sentinel', 'Forge Golem Prime', 'The Recombined', "Archon's Shadow"],
+  thornwood: ['The Tainted Bloom', 'Hollow Sentinel Lord', 'The Archivist', 'Overgrowth Titan'],
+  ironholt: ['Rogue Overseer', 'The Iron Revenant King', 'Acid Drake Matriarch', 'Deepvein Colossus'],
+  scarred_ring: ['Obsidian Warlord', 'The Molten Heart', 'Revenant Captain', 'Shard Colossus Prime'],
+  ashen_maw: ["Pyrevast's Echo", 'The Bound Eternal', 'Maw Guardian Prime', 'Fragment of the Dreaming God'],
+};
+
+const BOSS_DEPTH_INTERVAL = 15;
+
 /**
  * Pick a random element from an array.
  */
@@ -41,11 +52,51 @@ export class CombatSystem {
     this.enemyAttackTimer = 0;
     /** @type {object} Zone modifiers cached for the active zone */
     this.zoneModifiers = {};
+    /** @type {number} Tracks the depth at which a boss was already spawned */
+    this.bossSpawnedAtDepth = -1;
+
+    /** @type {object} Shard Power abilities */
+    this.abilities = {
+      shardBurst: { cooldown: 8000, currentCooldown: 0, name: 'Shard Burst' },
+      threshWard: { cooldown: 15000, currentCooldown: 0, name: "Thresh's Ward", charges: 0 },
+      emberHeal: { cooldown: 12000, currentCooldown: 0, name: 'Ember Heal' },
+    };
   }
 
   togglePause() {
     this.paused = !this.paused;
     return this.paused;
+  }
+
+  useAbility(abilityKey) {
+    if (!this.active || this.paused) return null;
+    const ability = this.abilities[abilityKey];
+    if (!ability || ability.currentCooldown > 0) return null;
+
+    ability.currentCooldown = ability.cooldown;
+    const stats = this.player.stats || this.player;
+
+    switch (abilityKey) {
+      case 'shardBurst': {
+        const damage = Math.round((stats.attack || 10) * 2);
+        if (this.enemy) {
+          this.enemy.health -= damage;
+        }
+        return { type: 'shardBurst', data: { damage, enemyHealth: this.enemy ? Math.max(0, this.enemy.health) : 0 } };
+      }
+      case 'threshWard': {
+        this.abilities.threshWard.charges = 3;
+        return { type: 'threshWard', data: { charges: 3 } };
+      }
+      case 'emberHeal': {
+        const maxHp = stats.maxHealth || 100;
+        const healAmount = Math.round(maxHp * 0.35);
+        this.player.health = Math.min(maxHp, (this.player.health || 0) + healAmount);
+        return { type: 'emberHeal', data: { healAmount, newHealth: this.player.health } };
+      }
+      default:
+        return null;
+    }
   }
 
   /**
@@ -62,6 +113,13 @@ export class CombatSystem {
     this.playerAttackTimer = 0;
     this.enemyAttackTimer = 0;
     this.zoneModifiers = getZoneModifiers(zoneId);
+
+    // Reset abilities
+    for (const ability of Object.values(this.abilities)) {
+      ability.currentCooldown = 0;
+    }
+    if (this.abilities.threshWard) this.abilities.threshWard.charges = 0;
+
     this.enemy = this.spawnEnemy(depth);
   }
 
@@ -96,6 +154,35 @@ export class CombatSystem {
       damage,
       isElite,
       goldReward: gold,
+    };
+  }
+
+  /**
+   * Create a boss enemy with greatly amplified stats.
+   * Bosses have 8x health, 1.5x damage, 3x gold, and a charge mechanic.
+   * @param {number} depth - Current depth
+   * @returns {object} Boss enemy object
+   */
+  spawnBoss(depth) {
+    const names = BOSS_NAMES[this.zoneId] || BOSS_NAMES.ashveil;
+    const bossName = pick(names);
+
+    const healthScale = Math.pow(ENEMY_HEALTH_SCALE, depth);
+    const damageScale = Math.pow(ENEMY_DAMAGE_SCALE, depth);
+
+    const health = Math.round(BASE_ENEMY_HEALTH * healthScale * 8);
+    const damage = Math.round(BASE_ENEMY_DAMAGE * damageScale * 1.5);
+    const gold = Math.round(BASE_ENEMY_GOLD * (1 + depth * 0.15) * 3);
+
+    return {
+      name: bossName,
+      health,
+      maxHealth: health,
+      damage,
+      isElite: true,
+      isBoss: true,
+      goldReward: gold,
+      attackCount: 0,
     };
   }
 
@@ -153,12 +240,29 @@ export class CombatSystem {
    * @returns {{ damage: number }}
    */
   processEnemyAttack(enemy, player) {
+    // Check Thresh's Ward
+    if (this.abilities.threshWard.charges > 0) {
+      this.abilities.threshWard.charges--;
+      return { damage: 0, blocked: true };
+    }
+
     const stats = player.stats || player;
     const defense = stats.defense || 0;
+
+    let rawDamage = enemy.damage;
+
+    // Boss charge mechanic: every 4th attack deals 2x damage
+    if (enemy.isBoss) {
+      enemy.attackCount = (enemy.attackCount || 0) + 1;
+      if (enemy.attackCount % 4 === 0) {
+        rawDamage *= 2;
+      }
+    }
+
     // Flat damage reduction: each point of defense removes 1 damage (min 1)
-    const damage = Math.max(1, enemy.damage - defense);
+    const damage = Math.max(1, rawDamage - defense);
     player.health = Math.max(0, (player.health || 0) - damage);
-    return { damage };
+    return { damage, isCharged: enemy.isBoss && enemy.attackCount % 4 === 0 };
   }
 
   /**
@@ -170,6 +274,12 @@ export class CombatSystem {
   dropLoot(depth) {
     const playerLevel = this.player.level || 1;
     const dropRateBonus = this.player.dropRateBonus || 0;
+
+    // Boss enemies get boosted drop rates (guaranteed epic+)
+    if (this.enemy && this.enemy.isBoss) {
+      return generateItem(playerLevel, this.zoneId, dropRateBonus + 0.50);
+    }
+
     const item = generateItem(playerLevel, this.zoneId, dropRateBonus);
 
     // For elite enemies, re-roll if below rare
@@ -193,6 +303,13 @@ export class CombatSystem {
     if (!this.active || !this.player || !this.enemy) return [];
     if (this.paused) return [];
 
+    // Tick ability cooldowns
+    for (const ability of Object.values(this.abilities)) {
+      if (ability.currentCooldown > 0) {
+        ability.currentCooldown = Math.max(0, ability.currentCooldown - deltaMs);
+      }
+    }
+
     const events = [];
 
     // --- Player attacks ---
@@ -215,11 +332,11 @@ export class CombatSystem {
         const gold = this.enemy.goldReward;
         events.push({
           type: 'enemyDeath',
-          data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite },
+          data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite, isBoss: this.enemy.isBoss || false },
         });
 
-        // Drop loot (chance-based, elites always drop)
-        const dropChance = this.enemy.isElite ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
+        // Drop loot (chance-based, elites/bosses always drop)
+        const dropChance = (this.enemy.isElite || this.enemy.isBoss) ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
         if (Math.random() < dropChance) {
           const loot = this.dropLoot(this.depth);
           events.push({
@@ -243,8 +360,15 @@ export class CombatSystem {
           }
         }
 
-        // Spawn next enemy
-        this.enemy = this.spawnEnemy(this.depth);
+        // Check if we should spawn a boss at this depth
+        const isBossDepth = this.depth > 0 && this.depth % BOSS_DEPTH_INTERVAL === 0;
+        const bossNotYetSpawned = this.bossSpawnedAtDepth !== this.depth;
+        if (isBossDepth && bossNotYetSpawned) {
+          this.enemy = this.spawnBoss(this.depth);
+          this.bossSpawnedAtDepth = this.depth;
+        } else {
+          this.enemy = this.spawnEnemy(this.depth);
+        }
         this.playerAttackTimer = 0;
         this.enemyAttackTimer = 0;
         break; // start fresh next tick
