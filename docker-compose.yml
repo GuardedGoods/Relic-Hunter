@@ -3,7 +3,7 @@ version: '3.8'
 services:
   relic-hunter:
     image: ghcr.io/guardedgoods/relic-hunter:latest
-    container_name: relic-hunter
+    container_name: relic
     ports:
       - "8049:80"
     restart: unless-stopped
