@@ -87,7 +87,7 @@ export class UIScene extends Phaser.Scene {
 
     this.add.text(panelX + panelW / 2, panelY + 14, 'STATS', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
@@ -121,7 +121,7 @@ export class UIScene extends Phaser.Scene {
       const val = stats[s.key] || 0;
       const t = this.add.text(sx, sy + i * lineH, `${s.icon} ${s.label}: ${s.format(val)}`, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '15px',
         color: s.color || '#ccccdd',
       }).setDepth(2);
       this.statTexts[s.key] = { text: t, format: s.format, label: s.label, icon: s.icon, color: s.color };
@@ -132,7 +132,7 @@ export class UIScene extends Phaser.Scene {
       const val = stats[s.key] || 0;
       const t = this.add.text(rx, sy + i * lineH, `${s.icon} ${s.label}: ${s.format(val)}`, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '15px',
         color: s.color || '#ccccdd',
       }).setDepth(2);
       this.statTexts[s.key] = { text: t, format: s.format, label: s.label, icon: s.icon, color: s.color };
@@ -142,7 +142,7 @@ export class UIScene extends Phaser.Scene {
       const val = stats[s.key] || 0;
       const t = this.add.text(sx, sy + leftCol.length * lineH + i * lineH, `${s.icon} ${s.label}: ${s.format(val)}`, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '15px',
         color: s.color || '#ccccdd',
       }).setDepth(2);
       this.statTexts[s.key] = { text: t, format: s.format, label: s.label, icon: s.icon, color: s.color };
@@ -210,7 +210,7 @@ export class UIScene extends Phaser.Scene {
 
     this.add.text(panelX + panelW / 2, panelY + 14, 'EQUIPMENT', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
@@ -220,7 +220,7 @@ export class UIScene extends Phaser.Scene {
     // Mass Discard buttons
     const trashLabelY = panelY + 156;
     this.add.text(panelX + 14, trashLabelY, 'Mass Discard:', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#666677',
+      fontFamily: 'monospace', fontSize: '13px', color: '#666677',
     }).setDepth(2);
 
     const trashRarities = [
@@ -246,7 +246,7 @@ export class UIScene extends Phaser.Scene {
       tbg.strokeRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
 
       const tLabel = this.add.text(tx + trashBtnW / 2, trashY + trashBtnH / 2, tr.label, {
-        fontFamily: 'monospace', fontSize: '7px', color: tr.color,
+        fontFamily: 'monospace', fontSize: '11px', color: tr.color,
       }).setOrigin(0.5).setDepth(3);
 
       const tHit = this.add.rectangle(tx + trashBtnW / 2, trashY + trashBtnH / 2, trashBtnW, trashBtnH)
@@ -267,7 +267,7 @@ export class UIScene extends Phaser.Scene {
     // Rarity Filter row
     const filterLabelY = trashY + trashBtnH + 3;
     this.add.text(panelX + 14, filterLabelY, 'Rarity Filter:', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#555566',
+      fontFamily: 'monospace', fontSize: '12px', color: '#555566',
     }).setDepth(2);
 
     if (!this.player.lootFilter) this.player.lootFilter = {};
@@ -294,7 +294,7 @@ export class UIScene extends Phaser.Scene {
 
       const fLabel = this.add.text(fx + trashBtnW / 2, fy + trashBtnH / 2,
         isSkipped ? '\u2715' : '\u2014', {
-        fontFamily: 'monospace', fontSize: '8px',
+        fontFamily: 'monospace', fontSize: '12px',
         color: isSkipped ? '#e94560' : '#333344',
         fontStyle: isSkipped ? 'bold' : 'normal',
       }).setOrigin(0.5).setDepth(3);
@@ -336,7 +336,7 @@ export class UIScene extends Phaser.Scene {
 
     const checkMark = isUpgOn ? '[\u2713] Only Upgrades' : '[ ] Only Upgrades';
     const upgLabel = this.add.text(upgToggleX + upgToggleW / 2, upgToggleY + upgToggleH / 2, checkMark, {
-      fontFamily: 'monospace', fontSize: '7px',
+      fontFamily: 'monospace', fontSize: '11px',
       color: isUpgOn ? '#4ade80' : '#555566',
       fontStyle: isUpgOn ? 'bold' : 'normal',
     }).setOrigin(0.5).setDepth(3);
@@ -380,7 +380,7 @@ export class UIScene extends Phaser.Scene {
       const icon = SLOT_ICONS[slot.key] || '•';
       const labelText = this.add.text(panelX + 14, sy, `${icon} ${slot.label}:`, {
         fontFamily: 'monospace',
-        fontSize: '11px',
+        fontSize: '15px',
         color: '#888899',
       }).setDepth(2);
       this.equipSlotElements.push(labelText);
@@ -396,7 +396,7 @@ export class UIScene extends Phaser.Scene {
 
         const itemText = this.add.text(panelX + 90, sy, item.name, {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '15px',
           color: rarityColor,
         }).setDepth(2);
         this.equipSlotElements.push(itemText);
@@ -409,13 +409,19 @@ export class UIScene extends Phaser.Scene {
           .setDepth(3);
         this.equipSlotElements.push(hitArea);
 
-        hitArea.on('pointerover', () => itemText.setColor('#ffffff'));
-        hitArea.on('pointerout', () => itemText.setColor(rarityColor));
+        hitArea.on('pointerover', () => {
+          itemText.setColor('#ffffff');
+          this._showEquipTooltip(item, panelX + 90, sy);
+        });
+        hitArea.on('pointerout', () => {
+          itemText.setColor(rarityColor);
+          this._hideEquipTooltip();
+        });
         hitArea.on('pointerdown', () => this._onEquipSlotClick(slot.key, item));
       } else {
         const emptyText = this.add.text(panelX + 90, sy, '-- Empty --', {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '15px',
           color: '#444455',
         }).setDepth(2);
         this.equipSlotElements.push(emptyText);
@@ -454,7 +460,7 @@ export class UIScene extends Phaser.Scene {
     this._invTitleText = this.add.text(this.invPanelX + this.invPanelW / 2, this.invPanelY + 14,
       `INVENTORY (${this.player.inventory.length}/${INVENTORY_SIZE})`, {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
@@ -502,7 +508,7 @@ export class UIScene extends Phaser.Scene {
 
           const itemText = this.add.text(cx + cellW / 2, cy + 14, item.name, {
             fontFamily: 'monospace',
-            fontSize: '9px',
+            fontSize: '13px',
             color: rarityColor,
             align: 'center',
             wordWrap: { width: cellW - 8 },
@@ -511,7 +517,7 @@ export class UIScene extends Phaser.Scene {
 
           const slotText = this.add.text(cx + cellW / 2, cy + 30, item.slot, {
             fontFamily: 'monospace',
-            fontSize: '7px',
+            fontSize: '11px',
             color: '#666677',
           }).setOrigin(0.5).setDepth(3);
           this.invCellElements.push(slotText);
@@ -519,7 +525,7 @@ export class UIScene extends Phaser.Scene {
           const score = getItemScore(item);
           const scoreText = this.add.text(cx + cellW - 3, cy + 3, score.toFixed(1), {
             fontFamily: 'monospace',
-            fontSize: '7px',
+            fontSize: '11px',
             color: '#888899',
           }).setOrigin(1, 0).setDepth(3);
           this.invCellElements.push(scoreText);
@@ -545,7 +551,7 @@ export class UIScene extends Phaser.Scene {
           }
 
           const arrow = this.add.text(cx + cellW - 4, cy + 2, arrowText, {
-            fontFamily: 'monospace', fontSize: '10px', color: arrowColor, fontStyle: 'bold',
+            fontFamily: 'monospace', fontSize: '14px', color: arrowColor, fontStyle: 'bold',
           }).setOrigin(1, 0).setDepth(3);
           this.invCellElements.push(arrow);
 
@@ -641,7 +647,7 @@ export class UIScene extends Phaser.Scene {
     // Name
     const nameText = this.add.text(ttX + ttW / 2, cy, item.name, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '18px',
       color: RARITY_COLORS[item.rarity] || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
@@ -651,7 +657,7 @@ export class UIScene extends Phaser.Scene {
     // Rarity + slot
     container.add(this.add.text(ttX + ttW / 2, cy, `${item.rarity.toUpperCase()} ${item.slot.toUpperCase()}`, {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '14px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2));
     cy += 18;
@@ -660,7 +666,7 @@ export class UIScene extends Phaser.Scene {
     const scoreVal = getItemScore(item);
     container.add(this.add.text(ttX + ttW / 2, cy, `Score: ${scoreVal.toFixed(2)}`, {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '14px',
       color: '#aaaacc',
     }).setOrigin(0.5).setDepth(2));
     cy += 16;
@@ -677,7 +683,7 @@ export class UIScene extends Phaser.Scene {
       for (const affix of item.affixes) {
         container.add(this.add.text(ttX + 18, cy, formatAffix(affix), {
           fontFamily: 'monospace',
-          fontSize: '11px',
+          fontSize: '15px',
           color: '#ccddee',
         }).setDepth(2));
         cy += 20;
@@ -690,7 +696,7 @@ export class UIScene extends Phaser.Scene {
       const setName = ITEM_SETS[item.setId].name;
       container.add(this.add.text(ttX + 18, cy, `Set: ${setName}`, {
         fontFamily: 'monospace',
-        fontSize: '10px',
+        fontSize: '14px',
         color: '#4ade80',
         fontStyle: 'bold',
       }).setDepth(2));
@@ -708,7 +714,7 @@ export class UIScene extends Phaser.Scene {
 
       container.add(this.add.text(ttX + ttW / 2, cy, `vs ${equippedItem.name}`, {
         fontFamily: 'monospace',
-        fontSize: '10px',
+        fontSize: '14px',
         color: '#888899',
       }).setOrigin(0.5).setDepth(2));
       cy += 16;
@@ -719,7 +725,7 @@ export class UIScene extends Phaser.Scene {
         const diffVal = Number.isFinite(change.diff) ? change.diff.toFixed(1) : '0';
         container.add(this.add.text(ttX + 18, cy, `${change.stat}: ${arrow}${diffVal}`, {
           fontFamily: 'monospace',
-          fontSize: '10px',
+          fontSize: '14px',
           color: color,
         }).setDepth(2));
         cy += 18;
@@ -783,6 +789,33 @@ export class UIScene extends Phaser.Scene {
       this.tooltipContainer.destroy();
       this.tooltipContainer = null;
     }
+  }
+
+  _showEquipTooltip(item, x, y) {
+    this._hideEquipTooltip();
+    if (!item || !item.affixes) return;
+    const lines = item.affixes.map(a => formatAffix(a));
+    const ttW = 250;
+    const ttH = 20 + lines.length * 18;
+    const ttX = Math.min(x, UI_X + UI_W - ttW - 5);
+    const ttY = Math.max(5, y - ttH - 5);
+    const container = this.add.container(0, 0).setDepth(40);
+    this._equipTooltip = container;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1e, 0.95);
+    bg.fillRoundedRect(ttX, ttY, ttW, ttH, 5);
+    bg.lineStyle(1, Phaser.Display.Color.HexStringToColor(RARITY_COLORS[item.rarity] || '#ffffff').color, 0.8);
+    bg.strokeRoundedRect(ttX, ttY, ttW, ttH, 5);
+    container.add(bg);
+    lines.forEach((line, i) => {
+      container.add(this.add.text(ttX + 8, ttY + 8 + i * 18, line, {
+        fontFamily: 'monospace', fontSize: '13px', color: '#ccddee',
+      }));
+    });
+  }
+
+  _hideEquipTooltip() {
+    if (this._equipTooltip) { this._equipTooltip.destroy(); this._equipTooltip = null; }
   }
 
   // ==========================
@@ -905,7 +938,7 @@ export class UIScene extends Phaser.Scene {
     // NEW ITEM header
     container.add(this.add.text(popX + popW / 2, cy, 'NEW ITEM', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '18px',
       color: '#f0c040',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2));
@@ -914,7 +947,7 @@ export class UIScene extends Phaser.Scene {
     // Item name (colored by rarity)
     container.add(this.add.text(popX + popW / 2, cy, item.name, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '18px',
       color: RARITY_COLORS[item.rarity] || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2));
@@ -923,7 +956,7 @@ export class UIScene extends Phaser.Scene {
     // Rarity + slot + score
     container.add(this.add.text(popX + popW / 2, cy, `${item.rarity.toUpperCase()} ${item.slot.toUpperCase()}  |  Score: ${newItemScore.toFixed(1)}`, {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '14px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2));
     cy += 16;
@@ -940,7 +973,7 @@ export class UIScene extends Phaser.Scene {
       for (const affix of item.affixes) {
         container.add(this.add.text(popX + 20, cy, formatAffix(affix), {
           fontFamily: 'monospace',
-          fontSize: '10px',
+          fontSize: '14px',
           color: '#ccddee',
         }).setDepth(2));
         cy += 16;
@@ -951,7 +984,7 @@ export class UIScene extends Phaser.Scene {
     // INVENTORY FULL warning
     container.add(this.add.text(popX + popW / 2, cy, 'INVENTORY FULL - Make room!', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2));
@@ -1031,7 +1064,7 @@ export class UIScene extends Phaser.Scene {
     // Worst items section header
     container.add(this.add.text(popX + popW / 2, cy, 'Worst items in inventory:', {
       fontFamily: 'monospace',
-      fontSize: '9px',
+      fontSize: '13px',
       color: '#777788',
     }).setOrigin(0.5).setDepth(2));
     cy += 14;
@@ -1044,7 +1077,7 @@ export class UIScene extends Phaser.Scene {
 
       container.add(this.add.text(popX + 20, cy, `[X] ${wName} (${entry.score.toFixed(1)})`, {
         fontFamily: 'monospace',
-        fontSize: '9px',
+        fontSize: '13px',
         color: wColor,
       }).setDepth(2));
 
@@ -1110,7 +1143,7 @@ export class UIScene extends Phaser.Scene {
 
       const label = this.add.text(UI_X + 14, sy, `${setDef.name} (${count}): ${activeBonus ? activeBonus.label : ''}`, {
         fontFamily: 'monospace',
-        fontSize: '8px',
+        fontSize: '12px',
         color: '#4ade80',
         fontStyle: 'bold',
       }).setDepth(2);
@@ -1151,7 +1184,7 @@ export class UIScene extends Phaser.Scene {
     }
     if (isPaused) {
       this._pauseIndicator = this.add.text(UI_X + UI_W / 2, 2, '\u23F8 PAUSED - Manage your gear!', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#4ade80', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '15px', color: '#4ade80', fontStyle: 'bold',
       }).setOrigin(0.5, 0).setDepth(100);
     }
   }
@@ -1163,7 +1196,7 @@ export class UIScene extends Phaser.Scene {
   _showFloatingMessage(text, color) {
     const msg = this.add.text(UI_X + UI_W / 2, 320, text, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '18px',
       color: color || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(50).setAlpha(0);

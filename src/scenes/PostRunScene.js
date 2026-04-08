@@ -133,7 +133,7 @@ export class PostRunScene extends Phaser.Scene {
         const rarityColor = RARITY_COLORS[part.rarity] || '#ffffff';
         this.add.text(breakdownX, sy, `${part.rarity}: ${part.count}`, {
           fontFamily: 'monospace',
-          fontSize: '12px',
+          fontSize: '18px',
           color: rarityColor,
         }).setDepth(5);
         sy += 18;
@@ -156,20 +156,20 @@ export class PostRunScene extends Phaser.Scene {
       const bestColor = RARITY_COLORS[bestItem.rarity] || '#ffffff';
       this.add.text(leftX, sy, 'Best Item:', {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '20px',
         color: '#aaaacc',
       }).setDepth(5);
 
       this.add.text(valueX, sy, bestItem.name, {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '20px',
         color: bestColor,
         fontStyle: 'bold',
       }).setOrigin(1, 0).setDepth(5);
 
       this.add.text(valueX, sy + 18, `${bestItem.rarity.toUpperCase()} ${bestItem.slot.toUpperCase()}`, {
         fontFamily: 'monospace',
-        fontSize: '10px',
+        fontSize: '15px',
         color: '#888899',
       }).setOrigin(1, 0).setDepth(5);
     }
@@ -222,8 +222,8 @@ export class PostRunScene extends Phaser.Scene {
         level: runData.level || 1,
       });
 
-      this.add.text(width / 2, btnY - 20, 'Score submitted to leaderboard!', {
-        fontFamily: 'monospace', fontSize: '10px', color: '#4ade80',
+      this.add.text(width / 2, 85, 'Score submitted to leaderboard!', {
+        fontFamily: 'monospace', fontSize: '15px', color: '#4ade80',
       }).setOrigin(0.5).setDepth(5);
     }
 
@@ -247,13 +247,13 @@ export class PostRunScene extends Phaser.Scene {
   _addStatRow(leftX, rightX, y, label, value, valueColor) {
     this.add.text(leftX, y, label, {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '22px',
       color: '#aaaacc',
     }).setDepth(5);
 
     this.add.text(rightX, y, value, {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '22px',
       color: valueColor || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(1, 0).setDepth(5);
@@ -273,7 +273,7 @@ export class PostRunScene extends Phaser.Scene {
 
     const text = this.add.text(x, y, label, {
       fontFamily: 'monospace',
-      fontSize: '18px',
+      fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(6);
@@ -345,7 +345,7 @@ export class PostRunScene extends Phaser.Scene {
     // Gold
     container.add(this.add.text(width / 2, panelY + 60, `Gold: ${this.player.gold}`, {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '22px',
       color: '#f0c040',
     }).setOrigin(0.5).setDepth(2));
 
@@ -366,14 +366,14 @@ export class PostRunScene extends Phaser.Scene {
       // Label
       container.add(this.add.text(panelX + 35, ry + 10, upg.label, {
         fontFamily: 'monospace',
-        fontSize: '16px',
+        fontSize: '22px',
         color: '#ffffff',
       }).setDepth(2));
 
       // Level
       container.add(this.add.text(panelX + 35, ry + 32, `Level: ${upg.currentLevel} / ${upg.maxLevel}`, {
         fontFamily: 'monospace',
-        fontSize: '12px',
+        fontSize: '18px',
         color: '#aaaacc',
       }).setDepth(2));
 
@@ -384,7 +384,7 @@ export class PostRunScene extends Phaser.Scene {
         : `+${upg.currentValue}`;
       container.add(this.add.text(panelX + 280, ry + 20, bonusStr, {
         fontFamily: 'monospace',
-        fontSize: '14px',
+        fontSize: '20px',
         color: '#4ade80',
       }).setOrigin(0.5).setDepth(2));
 
@@ -405,7 +405,7 @@ export class PostRunScene extends Phaser.Scene {
       const btnLabel = maxed ? 'MAXED' : `${upg.cost} g`;
       container.add(this.add.text(btnX + btnW / 2, btnY2 + btnH2 / 2, btnLabel, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '18px',
         color: maxed ? '#666666' : (canAfford ? '#ffffff' : '#aa6666'),
         fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(3));
@@ -445,7 +445,7 @@ export class PostRunScene extends Phaser.Scene {
 
     container.add(this.add.text(width / 2, closeBtnY + closeBtnH / 2, 'Close', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(3));

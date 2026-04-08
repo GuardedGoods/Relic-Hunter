@@ -81,20 +81,20 @@ export class GameScene extends Phaser.Scene {
     // ---- Zone + depth header ----
     this.zoneLabel = this.add.text(COMBAT_CX, 16, this.zoneData.name, {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '26px',
       color: this.zoneData.color || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
 
     this.depthLabel = this.add.text(COMBAT_CX, 40, `Depth: ${this.currentDepth}`, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '26px',
       color: '#aaaacc',
     }).setOrigin(0.5).setDepth(2);
 
     this.killCountLabel = this.add.text(COMBAT_CX, 58, 'Kills: 0', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '24px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2);
 
@@ -113,14 +113,14 @@ export class GameScene extends Phaser.Scene {
     this.progressBarFill = this.add.graphics().setDepth(3);
     this.progressBarMarkers = this.add.graphics().setDepth(4);
     this.progressBarText = this.add.text(barX + barW / 2, barY + barH / 2, '', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
     this._updateProgressBar();
 
     // Ember Storm indicator (hidden initially)
     this.stormOverlay = this.add.graphics().setDepth(1).setAlpha(0);
     this.stormLabel = this.add.text(COMBAT_CX, 76, '', {
-      fontFamily: 'monospace', fontSize: '11px', color: '#ffdd44', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '22px', color: '#ffdd44', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2).setVisible(false);
 
     // ---- Player character (left side) ----
@@ -132,7 +132,7 @@ export class GameScene extends Phaser.Scene {
     // Player name label
     this.add.text(this.playerX, this.playerY - 70, 'HERO', {
       fontFamily: 'monospace',
-      fontSize: '11px',
+      fontSize: '22px',
       color: '#4ade80',
     }).setOrigin(0.5).setDepth(3);
 
@@ -141,7 +141,7 @@ export class GameScene extends Phaser.Scene {
     this.playerHealthBarFill = this.add.graphics().setDepth(4);
     this.playerHealthText = this.add.text(this.playerX, this.playerY - 48, '', {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '20px',
       color: '#ffffff',
     }).setOrigin(0.5).setDepth(5);
     this._updatePlayerHealthBar();
@@ -155,14 +155,14 @@ export class GameScene extends Phaser.Scene {
     // Enemy name label
     this.enemyNameLabel = this.add.text(this.enemyX, this.enemyY - 70, '', {
       fontFamily: 'monospace',
-      fontSize: '11px',
+      fontSize: '22px',
       color: '#ff6666',
     }).setOrigin(0.5).setDepth(3);
 
     // Elite badge
     this.eliteBadge = this.add.text(this.enemyX, this.enemyY - 85, 'ELITE', {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '20px',
       color: '#f97316',
       fontStyle: 'bold',
       backgroundColor: '#3a1a00',
@@ -174,7 +174,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyHealthBarFill = this.add.graphics().setDepth(4);
     this.enemyHealthText = this.add.text(this.enemyX, this.enemyY - 48, '', {
       fontFamily: 'monospace',
-      fontSize: '10px',
+      fontSize: '20px',
       color: '#ffffff',
     }).setOrigin(0.5).setDepth(5);
     this._updateEnemyDisplay();
@@ -182,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     // ---- Level / XP display ----
     this.levelLabel = this.add.text(20, height - 30, `Lv.${this.player.level}`, {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '24px',
       color: '#f0c040',
     }).setDepth(2);
 
@@ -206,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
 
     this.pauseBtnText = this.add.text(pauseBtnX, pauseBtnY, '⚔ MANAGE GEAR', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#e94560', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '26px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     this.pauseHitArea = this.add.rectangle(pauseBtnX, pauseBtnY, pauseBtnW, pauseBtnH)
@@ -235,11 +235,11 @@ export class GameScene extends Phaser.Scene {
     this.pauseOverlay.setDepth(50);
 
     this.pauseText = this.add.text(COMBAT_CX, height / 2 - 40, '', {
-      fontFamily: 'monospace', fontSize: '20px', color: '#e94560', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '26px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(51).setVisible(false);
 
     this.pauseSubText = this.add.text(COMBAT_CX, height / 2, '', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#aaaacc',
+      fontFamily: 'monospace', fontSize: '24px', color: '#aaaacc',
     }).setOrigin(0.5).setDepth(51).setVisible(false);
 
     // Space bar to toggle pause
@@ -259,7 +259,7 @@ export class GameScene extends Phaser.Scene {
     this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
 
     this.speedBtnText = this.add.text(speedBtnX, speedBtnY, '1x', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#aaaacc', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '24px', color: '#aaaacc', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     const speedHit = this.add.rectangle(speedBtnX, speedBtnY, speedBtnW, speedBtnH)
@@ -286,7 +286,7 @@ export class GameScene extends Phaser.Scene {
     talentBg.strokeRoundedRect(talentBtnX - talentBtnW / 2, talentBtnY - talentBtnH / 2, talentBtnW, talentBtnH, 6);
 
     this.add.text(talentBtnX, talentBtnY, 'T: Talents', {
-      fontFamily: 'monospace', fontSize: '10px', color: '#f0c040',
+      fontFamily: 'monospace', fontSize: '20px', color: '#f0c040',
     }).setOrigin(0.5).setDepth(9);
 
     const talentHit = this.add.rectangle(talentBtnX, talentBtnY, talentBtnW, talentBtnH)
@@ -355,12 +355,12 @@ export class GameScene extends Phaser.Scene {
 
       // Icon (large centered emoji)
       const icon = this.add.text(ax + abSize / 2, ay + abSize / 2 - 2, def.icon, {
-        fontSize: '22px',
+        fontSize: '28px',
       }).setOrigin(0.5).setDepth(9);
 
       // Hotkey badge (small letter in corner)
       const hotkeyBadge = this.add.text(ax + 4, ay + 2, def.hotkey, {
-        fontFamily: 'monospace', fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '20px', color: '#ffffff', fontStyle: 'bold',
         backgroundColor: '#00000088', padding: { x: 2, y: 0 },
       }).setDepth(10);
 
@@ -369,13 +369,13 @@ export class GameScene extends Phaser.Scene {
 
       // Cooldown seconds text (centered)
       const cdText = this.add.text(ax + abSize / 2, ay + abSize / 2, '', {
-        fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '28px', color: '#ffffff', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(11).setVisible(false);
       cdText.setShadow(1, 1, '#000000', 2);
 
       // Ward charges label (only used for threshWard, hidden for others)
       const nameLabel = this.add.text(ax + abSize / 2, ay + abSize + 2, '', {
-        fontFamily: 'monospace', fontSize: '9px', color: '#888899',
+        fontFamily: 'monospace', fontSize: '20px', color: '#888899',
       }).setOrigin(0.5).setDepth(9);
 
       // Hit area for click + hover
@@ -1117,7 +1117,7 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.flash(400, 255, 150, 30);
             this._addCombatLog('A pulse from the Maw... EMBER STORM!', '#ffdd44');
             const stormText = this.add.text(COMBAT_CX, 200, 'EMBER STORM!', {
-              fontFamily: 'monospace', fontSize: '22px', color: '#ffdd44', fontStyle: 'bold',
+              fontFamily: 'monospace', fontSize: '28px', color: '#ffdd44', fontStyle: 'bold',
             }).setOrigin(0.5).setDepth(20).setAlpha(0);
             stormText.setShadow(0, 0, '#f97316', 8, true, true);
             this.tweens.add({
@@ -1144,7 +1144,7 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.flash(300, 255, 200, 50);
       // Victory text
       const bossText = this.add.text(COMBAT_CX, 200, 'BOSS DEFEATED!', {
-        fontFamily: 'monospace', fontSize: '24px', color: '#ffdd44', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '30px', color: '#ffdd44', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(20).setAlpha(0);
       bossText.setShadow(0, 0, '#f97316', 8, true, true);
       this.tweens.add({
@@ -1197,7 +1197,7 @@ export class GameScene extends Phaser.Scene {
     // "YOU DIED" text
     const deathText = this.add.text(COMBAT_CX, 250, 'YOU DIED', {
       fontFamily: 'monospace',
-      fontSize: '36px',
+      fontSize: '42px',
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
@@ -1232,7 +1232,7 @@ export class GameScene extends Phaser.Scene {
     // Level up notification in combat area
     const lvlText = this.add.text(COMBAT_CX, 200, `LEVEL UP! Lv.${data.newLevel}`, {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '26px',
       color: '#f0c040',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
@@ -1265,7 +1265,7 @@ export class GameScene extends Phaser.Scene {
   _spawnDamageNumber(x, y, text, color, fontSize) {
     const dmgText = this.add.text(x, y, text, {
       fontFamily: 'monospace',
-      fontSize: fontSize || '14px',
+      fontSize: fontSize || '20px',
       color: color || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(10);
@@ -1305,7 +1305,7 @@ export class GameScene extends Phaser.Scene {
 
     const logText = this.add.text(COMBAT_CX, this.combatLogY, message, {
       fontFamily: 'monospace',
-      fontSize: '11px',
+      fontSize: '22px',
       color: color || '#aaaacc',
     }).setOrigin(0.5).setDepth(2).setAlpha(0);
 
@@ -1357,7 +1357,7 @@ export class GameScene extends Phaser.Scene {
 
     const text = this.add.text(btnX, btnY, 'Retreat', {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '24px',
       color: '#ff8888',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(9);
@@ -1465,19 +1465,19 @@ export class GameScene extends Phaser.Scene {
     container.add(bg);
 
     container.add(this.add.text(ttX + 8, ttY + 6, `${def.icon} ${def.name}`, {
-      fontFamily: 'monospace', fontSize: '12px', color: def.textColor, fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '24px', color: def.textColor, fontStyle: 'bold',
     }));
 
     container.add(this.add.text(ttX + 8, ttY + 24, def.desc, {
-      fontFamily: 'monospace', fontSize: '10px', color: '#ccccdd', lineSpacing: 2,
+      fontFamily: 'monospace', fontSize: '20px', color: '#ccccdd', lineSpacing: 2,
     }));
 
     container.add(this.add.text(ttX + ttW - 8, ttY + ttH - 14, `CD: ${def.cd}`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#888899',
+      fontFamily: 'monospace', fontSize: '20px', color: '#888899',
     }).setOrigin(1, 0));
 
     container.add(this.add.text(ttX + 8, ttY + ttH - 14, `[${def.hotkey}]`, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#f0c040', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '20px', color: '#f0c040', fontStyle: 'bold',
     }));
   }
 
@@ -1614,10 +1614,10 @@ export class GameScene extends Phaser.Scene {
     const totalSpent = Object.values(spentPoints).reduce((s, v) => s + v, 0);
     const available = talentPoints - totalSpent;
     container.add(this.add.text(w / 2, py + 20, `TALENT TREES — ${this.classData.name}`, {
-      fontFamily: 'monospace', fontSize: '16px', color: '#f0c040', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '28px', color: '#f0c040', fontStyle: 'bold',
     }).setOrigin(0.5));
     container.add(this.add.text(w / 2, py + 42, `Available Points: ${available}  (1 per level)`, {
-      fontFamily: 'monospace', fontSize: '11px', color: available > 0 ? '#4ade80' : '#888899',
+      fontFamily: 'monospace', fontSize: '22px', color: available > 0 ? '#4ade80' : '#888899',
     }).setOrigin(0.5));
     const trees = Object.entries(this.classData.talents);
     const treeW = 200, treeGap = 20;
@@ -1626,10 +1626,10 @@ export class GameScene extends Phaser.Scene {
     trees.forEach(([, tree], treeIdx) => {
       const tx = treeStartX + treeIdx * (treeW + treeGap);
       container.add(this.add.text(tx + treeW / 2, treeY, `${tree.icon} ${tree.name}`, {
-        fontFamily: 'monospace', fontSize: '12px', color: tree.color, fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '24px', color: tree.color, fontStyle: 'bold',
       }).setOrigin(0.5));
       container.add(this.add.text(tx + treeW / 2, treeY + 18, tree.description, {
-        fontFamily: 'monospace', fontSize: '7px', color: '#888899', wordWrap: { width: treeW - 10 },
+        fontFamily: 'monospace', fontSize: '18px', color: '#888899', wordWrap: { width: treeW - 10 },
       }).setOrigin(0.5, 0));
       const pointsInTree = tree.tiers.reduce((s, t) => s + (spentPoints[t.id] || 0), 0);
       tree.tiers.forEach((talent, tierIdx) => {
@@ -1647,13 +1647,13 @@ export class GameScene extends Phaser.Scene {
         nodeG.strokeRoundedRect(tx + 10, ny, treeW - 20, 58, 5);
         container.add(nodeG);
         container.add(this.add.text(tx + treeW / 2, ny + 8, talent.name, {
-          fontFamily: 'monospace', fontSize: '10px', color: allocated > 0 ? tree.color : '#aaaacc', fontStyle: 'bold',
+          fontFamily: 'monospace', fontSize: '20px', color: allocated > 0 ? tree.color : '#aaaacc', fontStyle: 'bold',
         }).setOrigin(0.5));
         container.add(this.add.text(tx + treeW / 2, ny + 22, talent.description, {
-          fontFamily: 'monospace', fontSize: '7px', color: '#888899', wordWrap: { width: treeW - 40 },
+          fontFamily: 'monospace', fontSize: '18px', color: '#888899', wordWrap: { width: treeW - 40 },
         }).setOrigin(0.5, 0));
         container.add(this.add.text(tx + treeW - 16, ny + 4, `${allocated}/${talent.maxPoints}`, {
-          fontFamily: 'monospace', fontSize: '8px', color: allocated > 0 ? '#4ade80' : '#555566',
+          fontFamily: 'monospace', fontSize: '18px', color: allocated > 0 ? '#4ade80' : '#555566',
         }).setOrigin(1, 0));
         if (canAllocate) {
           const hit = this.add.rectangle(tx + treeW / 2, ny + 29, treeW - 20, 58)
@@ -1674,7 +1674,7 @@ export class GameScene extends Phaser.Scene {
       });
     });
     const closeText = this.add.text(px + pw - 15, py + 8, '✕', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#e94560', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '28px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     container.add(closeText);
     closeText.on('pointerdown', () => this._closeTalentTree());

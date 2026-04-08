@@ -91,13 +91,25 @@ export class CombatSystem {
 
     switch (abilityKey) {
       case 'cleave': {
-        const damage = Math.round(attack * 1.5);
+        let cleaveMult = 1.5;
+        const bladeFlurryRank = this._talentRank('blade_flurry');
+        if (bladeFlurryRank > 0) cleaveMult += bladeFlurryRank * 0.03;
+        const damage = Math.round(attack * cleaveMult);
         if (this.enemy) this.enemy.health -= damage;
-        return { type: 'cleave', data: { damage, enemyHealth: this.enemy ? Math.max(0, this.enemy.health) : 0 } };
+        // Warlord: Rallying Cry — Cleave heals
+        const rallyingRank = this._talentRank('rallying_cry');
+        let healAmount = 0;
+        if (rallyingRank > 0) {
+          healAmount = Math.round(maxHp * rallyingRank * 0.01);
+          this.player.health = Math.min(maxHp, (this.player.health || 0) + healAmount);
+        }
+        return { type: 'cleave', data: { damage, healAmount, enemyHealth: this.enemy ? Math.max(0, this.enemy.health) : 0 } };
       }
       case 'rend': {
-        // Apply bleed DoT: 50% ATK over 6 seconds (ticks every 1s)
-        const totalBleedDmg = Math.round(attack * 0.5);
+        let bleedMult = 0.5;
+        const deepWoundsRank = this._talentRank('deep_wounds');
+        if (deepWoundsRank > 0) bleedMult += deepWoundsRank * 0.05;
+        const totalBleedDmg = Math.round(attack * bleedMult);
         const tickDmg = Math.ceil(totalBleedDmg / 6);
         this.bleedTargets.push({ tickDamage: tickDmg, remainingTicks: 6, tickTimer: 0 });
         return { type: 'rend', data: { totalDamage: totalBleedDmg, duration: 6 } };
@@ -233,6 +245,13 @@ export class CombatSystem {
    * @param {object} enemy - Enemy target
    * @returns {{ damage: number, isCrit: boolean }}
    */
+  /**
+   * Get the number of points allocated to a talent.
+   */
+  _talentRank(talentId) {
+    return (this.player && this.player.talentPoints && this.player.talentPoints[talentId]) || 0;
+  }
+
   calculateDamage(player, enemy) {
     const stats = player.stats || player;
 
@@ -259,15 +278,46 @@ export class CombatSystem {
       damage *= 1 + stats.lowHpDamage / 100;
     }
 
+    // === Talent bonuses ===
+    // Berserker: Rampage (+3% attack per rank)
+    const rampageRank = this._talentRank('rampage');
+    if (rampageRank > 0) damage *= 1 + rampageRank * 0.03;
+
+    // Berserker: Deathwish (+3% damage per rank below 50% HP)
+    const deathwishRank = this._talentRank('deathwish');
+    if (deathwishRank > 0 && player.health < (stats.maxHealth || 100) * 0.5) {
+      damage *= 1 + deathwishRank * 0.03;
+    }
+
+    // Berserker: Onslaught (+1% double-hit per rank)
+    const onslaughtRank = this._talentRank('onslaught');
+    if (onslaughtRank > 0 && Math.random() < onslaughtRank * 0.01) {
+      damage *= 2; // double hit
+    }
+
     // Crit roll
-    const critChance = stats.critChance || 0.05;
-    const critDamage = stats.critDamage || 1.5;
+    let critChance = stats.critChance || 0.05;
+    const surgicalRank = this._talentRank('surgical_strikes');
+    if (surgicalRank > 0) critChance += surgicalRank * 0.01;
+
+    let critDamage = stats.critDamage || 1.5;
+    const endlessRageRank = this._talentRank('endless_rage');
+    if (endlessRageRank > 0) critDamage += endlessRageRank * 0.02;
+
     const isCrit = Math.random() < critChance;
     if (isCrit) {
       damage *= critDamage;
+
+      // Blademaster: Thousand Cuts (crits reduce cooldowns)
+      const thousandCutsRank = this._talentRank('thousand_cuts');
+      if (thousandCutsRank > 0) {
+        const cdReduction = thousandCutsRank * 100; // 0.1s per rank in ms
+        for (const ab of Object.values(this.abilities)) {
+          if (ab.currentCooldown > 0) ab.currentCooldown = Math.max(0, ab.currentCooldown - cdReduction);
+        }
+      }
     }
 
-    // Subtract enemy "defense" if the concept is ever added (future-proof)
     damage = Math.max(1, Math.round(damage));
 
     return { damage, isCrit };
@@ -293,10 +343,36 @@ export class CombatSystem {
       }
     }
 
-    // Flat damage reduction: each point of defense removes 1 damage (min 1)
-    const damage = Math.max(1, rawDamage - defense);
+    // === Talent defensive bonuses ===
+    // Warlord: Iron Skin (+2% damage reduction per rank)
+    const ironSkinRank = this._talentRank('iron_skin');
+    if (ironSkinRank > 0) rawDamage *= (1 - ironSkinRank * 0.02);
+
+    // Warlord: Commanding Presence (+1% defense per rank)
+    let totalDefense = defense;
+    const commandingRank = this._talentRank('commanding_presence');
+    if (commandingRank > 0) totalDefense += commandingRank;
+
+    // Blademaster: Riposte (+2% dodge per rank)
+    const riposteRank = this._talentRank('riposte');
+    if (riposteRank > 0 && Math.random() < riposteRank * 0.02) {
+      return { damage: 0, dodged: true };
+    }
+
+    const damage = Math.max(1, Math.round(rawDamage) - totalDefense);
     player.health = Math.max(0, (player.health || 0) - damage);
-    return { damage, isCharged: enemy.isBoss && enemy.attackCount % 4 === 0 };
+
+    // Warlord: Last Stand (lifesteal below 30% HP)
+    const lastStandRank = this._talentRank('last_stand');
+    if (lastStandRank > 0 && player.health < (player.stats?.maxHealth || 100) * 0.3) {
+      const heal = Math.round(damage * lastStandRank * 0.02);
+      player.health = Math.min(player.stats?.maxHealth || 100, player.health + heal);
+    }
+
+    // Warlord: Undying (+2% max HP per rank — applied as bonus HP)
+    // (This is a passive stat bonus, applied in Player.getComputedStats instead)
+
+    return { damage, isCharged: enemy.isBoss && enemy.attackCount % 4 === 0, dodged: false };
   }
 
   /**
