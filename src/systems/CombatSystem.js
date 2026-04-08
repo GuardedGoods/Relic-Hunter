@@ -505,10 +505,11 @@ export class CombatSystem {
       });
 
 
-      // Check enemy death
+      // Check enemy death — return immediately, only one kill per tick
       if (this.enemy.health <= 0) {
         this._handleEnemyDeath(events);
-        break;
+        this.playerAttackTimer = 0;
+        return events;
       }
     }
 
