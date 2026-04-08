@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '../models/Player.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
+import { EmberStormSystem } from '../systems/EmberStormSystem.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { RARITY_COLORS, ZONES } from '../data/constants.js';
 
@@ -52,6 +53,11 @@ export class GameScene extends Phaser.Scene {
     this.combatSystem = new CombatSystem();
     this.combatSystem.startCombat(this.player, this.zoneData.id, this.currentDepth);
 
+    // ---- Ember Storm system ----
+    this.emberStorm = new EmberStormSystem();
+    this.stormOverlay = null;
+    this.stormLabel = null;
+
     // ---- Draw combat area background (left side: 0-500px) ----
     const combatBg = this.add.graphics();
     combatBg.fillStyle(0x12122a, 1);
@@ -79,6 +85,12 @@ export class GameScene extends Phaser.Scene {
       fontSize: '12px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2);
+
+    // Ember Storm indicator (hidden initially)
+    this.stormOverlay = this.add.graphics().setDepth(1).setAlpha(0);
+    this.stormLabel = this.add.text(250, 76, '', {
+      fontFamily: 'monospace', fontSize: '11px', color: '#ffdd44', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(2).setVisible(false);
 
     // ---- Player character (left side) ----
     this.playerX = 140;
@@ -292,7 +304,10 @@ export class GameScene extends Phaser.Scene {
     const stats = this.player.getComputedStats();
     this.player.stats = stats;
     this.player.attackSpeed = stats.attackSpeed || 1;
-    this.player.dropRateBonus = stats.dropRateBonus || 0;
+    this.player.dropRateBonus = (stats.dropRateBonus || 0) + this.emberStorm.getDropRateBonus();
+
+    // Apply Ember Storm enemy damage multiplier
+    this.combatSystem.enemyDamageMult = this.emberStorm.getEnemyDamageMult();
 
     // Process combat tick (apply speed multiplier)
     const events = this.combatSystem.tick(delta * this.speedMultiplier);
@@ -328,6 +343,24 @@ export class GameScene extends Phaser.Scene {
 
     // Update ability cooldown displays
     this._updateAbilityBar();
+
+    // Ember Storm tick
+    if (this.emberStorm.active) {
+      const stormEnded = this.emberStorm.tick(delta * this.speedMultiplier);
+      const status = this.emberStorm.getStatus(this.currentDepth);
+      this.stormLabel.setText(`EMBER STORM ${status.remainingSeconds}s`).setVisible(true);
+      // Pulsing amber overlay
+      const pulse = 0.08 + Math.sin(Date.now() / 300) * 0.04;
+      this.stormOverlay.clear();
+      this.stormOverlay.fillStyle(0xff8800, pulse);
+      this.stormOverlay.fillRect(0, 0, 500, this.scale.height);
+      this.stormOverlay.setAlpha(1);
+      if (stormEnded) {
+        this.stormOverlay.clear().setAlpha(0);
+        this.stormLabel.setVisible(false);
+        this._addCombatLog('The Ember Storm subsides...', '#888899');
+      }
+    }
 
     // Auto-save every 30 seconds
     this.autoSaveTimer += delta;
@@ -577,6 +610,23 @@ export class GameScene extends Phaser.Scene {
             yoyo: true,
             ease: 'Back.easeOut',
           });
+
+          // Check for Ember Storm trigger
+          if (this.emberStorm.checkTrigger(this.currentDepth)) {
+            this.emberStorm.startStorm(this.currentDepth);
+            this.cameras.main.flash(400, 255, 150, 30);
+            this._addCombatLog('A pulse from the Maw... EMBER STORM!', '#ffdd44');
+            const stormText = this.add.text(250, 200, 'EMBER STORM!', {
+              fontFamily: 'monospace', fontSize: '22px', color: '#ffdd44', fontStyle: 'bold',
+            }).setOrigin(0.5).setDepth(20).setAlpha(0);
+            stormText.setShadow(0, 0, '#f97316', 8, true, true);
+            this.tweens.add({
+              targets: stormText, alpha: 1, y: 170, duration: 400, hold: 1500,
+              onComplete: () => {
+                this.tweens.add({ targets: stormText, alpha: 0, y: 140, duration: 400, onComplete: () => stormText.destroy() });
+              },
+            });
+          }
         }
 
         // Update enemy display for new enemy

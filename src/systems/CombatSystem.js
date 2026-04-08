@@ -46,6 +46,8 @@ export class CombatSystem {
     this.active = false;
     /** @type {boolean} Whether combat is paused */
     this.paused = false;
+    /** @type {number} External enemy damage multiplier (e.g., Ember Storm) */
+    this.enemyDamageMult = 1;
     /** @type {number} Accumulated time since last player attack (ms) */
     this.playerAttackTimer = 0;
     /** @type {number} Accumulated time since last enemy attack (ms) */
@@ -249,7 +251,7 @@ export class CombatSystem {
     const stats = player.stats || player;
     const defense = stats.defense || 0;
 
-    let rawDamage = enemy.damage;
+    let rawDamage = enemy.damage * (this.enemyDamageMult || 1);
 
     // Boss charge mechanic: every 4th attack deals 2x damage
     if (enemy.isBoss) {
