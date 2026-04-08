@@ -1572,6 +1572,28 @@ export class GameScene extends Phaser.Scene {
     this.speedBtnBg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 6);
   }
 
+  // ---- Fury bar ----
+
+  _updateFuryBar() {
+    if (!this.combatSystem) return;
+    const fury = Math.floor(this.combatSystem.fury || 0);
+    const maxFury = this.combatSystem.maxFury || 100;
+    const ratio = fury / maxFury;
+    const barX = 20;
+    const barW = COMBAT_W - 40;
+    const barH = 10;
+    const barY = 98;
+
+    this.furyBarFill.clear();
+    if (ratio > 0) {
+      const colorHex = this.classData.resource?.color || '#e94560';
+      const colorInt = Phaser.Display.Color.HexStringToColor(colorHex).color;
+      this.furyBarFill.fillStyle(colorInt, 1);
+      this.furyBarFill.fillRoundedRect(barX + 1, barY + 1, (barW - 2) * ratio, barH - 2, 2);
+    }
+    this.furyBarLabel.setText(`${this.classData.resource.name}: ${fury}/${maxFury}`);
+  }
+
   // ---- End run ----
 
   _endRun() {
