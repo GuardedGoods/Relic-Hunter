@@ -204,6 +204,30 @@ export class GameScene extends Phaser.Scene {
       this.togglePause();
     });
 
+    // ---- 2x Speed toggle button ----
+    this.speedMultiplier = 1;
+    const speedBtnW = 60;
+    const speedBtnH = 28;
+    const speedBtnX = 460;
+    const speedBtnY = height - 30;
+    this.speedBtnBg = this.add.graphics();
+    this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
+
+    this.speedBtnText = this.add.text(speedBtnX, speedBtnY, '1x', {
+      fontFamily: 'monospace', fontSize: '13px', color: '#aaaacc', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const speedHit = this.add.rectangle(speedBtnX, speedBtnY, speedBtnW, speedBtnH)
+      .setInteractive({ useHandCursor: true })
+      .setAlpha(0.001);
+
+    speedHit.on('pointerdown', () => {
+      this.speedMultiplier = this.speedMultiplier === 1 ? 2 : 1;
+      this.speedBtnText.setText(this.speedMultiplier === 1 ? '1x' : '2x');
+      this.speedBtnText.setColor(this.speedMultiplier === 2 ? '#f0c040' : '#aaaacc');
+      this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
+    });
+
     // ---- Auto-save timer ----
     this.autoSaveTimer = 0;
 
@@ -223,8 +247,8 @@ export class GameScene extends Phaser.Scene {
     this.player.attackSpeed = stats.attackSpeed || 1;
     this.player.dropRateBonus = stats.dropRateBonus || 0;
 
-    // Process combat tick
-    const events = this.combatSystem.tick(delta);
+    // Process combat tick (apply speed multiplier)
+    const events = this.combatSystem.tick(delta * this.speedMultiplier);
 
     for (const event of events) {
       switch (event.type) {
@@ -771,6 +795,15 @@ export class GameScene extends Phaser.Scene {
       this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
       this.pauseBtnText.setText('⚔ MANAGE GEAR').setColor('#e94560');
     }
+  }
+
+  _drawSpeedBtn(x, y, w, h) {
+    this.speedBtnBg.clear();
+    const borderColor = this.speedMultiplier === 2 ? 0xf0c040 : 0x555577;
+    this.speedBtnBg.fillStyle(0x16213e, 1);
+    this.speedBtnBg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+    this.speedBtnBg.lineStyle(2, borderColor, 1);
+    this.speedBtnBg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 6);
   }
 
   // ---- End run ----

@@ -212,8 +212,7 @@ export class UIScene extends Phaser.Scene {
       { key: SLOT.CHEST, label: 'Chest' },
       { key: SLOT.GLOVES, label: 'Gloves' },
       { key: SLOT.BOOTS, label: 'Boots' },
-      { key: 'ring1', label: 'Ring 1' },
-      { key: 'ring2', label: 'Ring 2' },
+      { key: 'ring', label: 'Ring' },
     ];
 
     const slotH = 20;
@@ -425,8 +424,7 @@ export class UIScene extends Phaser.Scene {
     // Figure out which equipped item to compare against
     let equippedSlotKey = item.slot;
     if (item.slot === SLOT.RING) {
-      // Compare against ring1, fallback ring2
-      equippedSlotKey = this.player.equipment.ring1 ? 'ring1' : 'ring2';
+      equippedSlotKey = 'ring';
     }
     const equippedItem = this.player.equipment[equippedSlotKey] || null;
     const comparison = compareItems(equippedItem, item, this.player.getComputedStats());
