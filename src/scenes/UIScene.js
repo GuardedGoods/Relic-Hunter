@@ -993,30 +993,30 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    let sy = 300;
-    for (const [setId, count] of Object.entries(setCounts)) {
+    // Only show sets with 2+ pieces (1 piece doesn't activate any bonus)
+    const activeSets = Object.entries(setCounts).filter(([, count]) => count >= 2);
+    if (activeSets.length === 0) return;
+
+    // Draw compactly in the equipment panel area (bottom edge)
+    let sy = 295;
+    for (const [setId, count] of activeSets) {
       const setDef = ITEM_SETS[setId];
       if (!setDef) continue;
 
-      const setLabel = this.add.text(UI_X + 14, sy, `${setDef.name} (${count})`, {
+      // Only show the highest active bonus tier, not all thresholds
+      let activeBonus = null;
+      for (const [threshold, bonus] of Object.entries(setDef.bonuses)) {
+        if (count >= Number(threshold)) activeBonus = bonus;
+      }
+
+      const label = this.add.text(UI_X + 14, sy, `${setDef.name} (${count}): ${activeBonus ? activeBonus.label : ''}`, {
         fontFamily: 'monospace',
-        fontSize: '9px',
+        fontSize: '8px',
         color: '#4ade80',
         fontStyle: 'bold',
       }).setDepth(2);
-      this.setBonusTexts.push(setLabel);
-      sy += 14;
-
-      for (const [threshold, bonus] of Object.entries(setDef.bonuses)) {
-        const active = count >= Number(threshold);
-        const bonusLabel = this.add.text(UI_X + 24, sy, `(${threshold}) ${bonus.label}`, {
-          fontFamily: 'monospace',
-          fontSize: '8px',
-          color: active ? '#4ade80' : '#555566',
-        }).setDepth(2);
-        this.setBonusTexts.push(bonusLabel);
-        sy += 12;
-      }
+      this.setBonusTexts.push(label);
+      sy += 12;
     }
   }
 
