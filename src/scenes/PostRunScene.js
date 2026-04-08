@@ -3,6 +3,7 @@ import { RARITY_COLORS, RARITY_ORDER, UPGRADE_TYPES } from '../data/constants.js
 import { Player } from '../models/Player.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { getAllUpgrades, applyUpgrade } from '../systems/ProgressionSystem.js';
+import { isLoggedIn, submitScore } from '../systems/ApiClient.js';
 
 export class PostRunScene extends Phaser.Scene {
   constructor() {
@@ -186,6 +187,22 @@ export class PostRunScene extends Phaser.Scene {
       this.player.currentHealth = stats.maxHealth;
       saveGame(this.player);
     } catch (_) { /* ignore */ }
+
+    // Submit score to leaderboard
+    if (isLoggedIn()) {
+      submitScore({
+        depth: depthReached || 0,
+        kills: enemiesKilled || 0,
+        gold: goldEarned || 0,
+        zone: this.registry.get('selectedZone') || 'ashveil',
+        durationSeconds: Math.round((Date.now() - (runData.startTime || Date.now())) / 1000),
+        died: died || false,
+      });
+
+      this.add.text(width / 2, btnY - 20, 'Score submitted to leaderboard!', {
+        fontFamily: 'monospace', fontSize: '10px', color: '#4ade80',
+      }).setOrigin(0.5).setDepth(5);
+    }
 
     // Upgrade panel state
     this.upgradePanel = null;

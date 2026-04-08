@@ -4,6 +4,7 @@ import { getAvailableZones } from '../systems/ZoneSystem.js';
 import { hasSave, loadGame, saveGame } from '../systems/SaveSystem.js';
 import { getAllUpgrades, applyUpgrade } from '../systems/ProgressionSystem.js';
 import { Player } from '../models/Player.js';
+import { isLoggedIn, getUsername, login, register, logout, getLeaderboard } from '../systems/ApiClient.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -138,6 +139,15 @@ export class MainMenuScene extends Phaser.Scene {
     this._createButton(width / 2, upgradesBtnY, 200, 48, 'Upgrades', 0x16213e, () => {
       this._showUpgradePanel();
     });
+
+    // Leaderboard button
+    const lbBtnY = upgradesBtnY + 65;
+    this._createButton(width / 2, lbBtnY, 200, 48, 'Leaderboard', 0x16213e, () => {
+      this._showLeaderboard();
+    });
+
+    // ---- Auth / Account ----
+    this._drawAuthSection(width);
 
     // ---- Upgrade panel container (hidden initially) ----
     this.upgradePanel = null;
@@ -462,6 +472,242 @@ export class MainMenuScene extends Phaser.Scene {
       this.upgradePanel.destroy();
       this.upgradePanel = null;
       this._upgradePanelPlayer = null;
+    }
+  }
+
+  _drawAuthSection(width) {
+    // Clean up previous auth elements
+    if (this.authElements) this.authElements.forEach(e => e.destroy());
+    this.authElements = [];
+
+    if (isLoggedIn()) {
+      // Show username + logout button
+      const userText = this.add.text(width - 20, 16, `⚔ ${getUsername()}`, {
+        fontFamily: 'monospace', fontSize: '12px', color: '#4ade80', fontStyle: 'bold',
+      }).setOrigin(1, 0).setDepth(10);
+      this.authElements.push(userText);
+
+      const logoutText = this.add.text(width - 20, 34, '[Logout]', {
+        fontFamily: 'monospace', fontSize: '10px', color: '#888899',
+      }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
+      logoutText.on('pointerdown', () => {
+        logout();
+        this._drawAuthSection(width);
+      });
+      logoutText.on('pointerover', () => logoutText.setColor('#ffffff'));
+      logoutText.on('pointerout', () => logoutText.setColor('#888899'));
+      this.authElements.push(logoutText);
+    } else {
+      // Show login button
+      const loginBtn = this.add.text(width - 20, 16, '[Login / Register]', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#60a5fa',
+      }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
+      loginBtn.on('pointerdown', () => this._showLoginModal());
+      loginBtn.on('pointerover', () => loginBtn.setColor('#ffffff'));
+      loginBtn.on('pointerout', () => loginBtn.setColor('#60a5fa'));
+      this.authElements.push(loginBtn);
+    }
+  }
+
+  _showLoginModal() {
+    if (this.loginModal) return;
+
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const container = this.add.container(0, 0).setDepth(50);
+    this.loginModal = container;
+
+    // Backdrop
+    const backdrop = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.7).setInteractive();
+    container.add(backdrop);
+
+    // Modal box
+    const mw = 320;
+    const mh = 280;
+    const mx = w / 2 - mw / 2;
+    const my = h / 2 - mh / 2;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x16213e, 1);
+    bg.fillRoundedRect(mx, my, mw, mh, 10);
+    bg.lineStyle(2, 0x333355, 1);
+    bg.strokeRoundedRect(mx, my, mw, mh, 10);
+    container.add(bg);
+
+    container.add(this.add.text(w / 2, my + 20, 'LOGIN / REGISTER', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#e94560', fontStyle: 'bold',
+    }).setOrigin(0.5));
+
+    // Instructions
+    container.add(this.add.text(w / 2, my + 45, 'Enter username and password', {
+      fontFamily: 'monospace', fontSize: '10px', color: '#888899',
+    }).setOrigin(0.5));
+
+    // We can't use HTML inputs in Phaser canvas, so use prompt() dialogs
+    // This is the simplest approach for a game
+
+    // Login button
+    this._createModalButton(container, w / 2, my + 100, 200, 40, 'Login', 0x0f3460, () => {
+      const username = prompt('Username:');
+      if (!username) return;
+      const password = prompt('Password:');
+      if (!password) return;
+      login(username, password).then(() => {
+        this._closeLoginModal();
+        this._drawAuthSection(this.scale.width);
+      }).catch(err => {
+        alert(err.message);
+      });
+    });
+
+    // Register button
+    this._createModalButton(container, w / 2, my + 155, 200, 40, 'Register New Account', 0x2a5a28, () => {
+      const username = prompt('Choose username (2-20 chars):');
+      if (!username) return;
+      const password = prompt('Choose password (4+ chars):');
+      if (!password) return;
+      register(username, password).then(() => {
+        // Auto-login after register
+        return login(username, password);
+      }).then(() => {
+        this._closeLoginModal();
+        this._drawAuthSection(this.scale.width);
+      }).catch(err => {
+        alert(err.message);
+      });
+    });
+
+    // Close button
+    this._createModalButton(container, w / 2, my + 220, 120, 30, 'Cancel', 0x333355, () => {
+      this._closeLoginModal();
+    });
+  }
+
+  _closeLoginModal() {
+    if (this.loginModal) {
+      this.loginModal.destroy();
+      this.loginModal = null;
+    }
+  }
+
+  _createModalButton(container, x, y, w, h, text, color, onClick) {
+    const bg = this.add.graphics();
+    bg.fillStyle(color, 1);
+    bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+    bg.lineStyle(1, 0x555577, 0.6);
+    bg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 6);
+    container.add(bg);
+
+    const label = this.add.text(x, y, text, {
+      fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    container.add(label);
+
+    const hitArea = this.add.rectangle(x, y, w, h).setInteractive({ useHandCursor: true }).setAlpha(0.001);
+    container.add(hitArea);
+    hitArea.on('pointerdown', onClick);
+    hitArea.on('pointerover', () => label.setColor('#f0c040'));
+    hitArea.on('pointerout', () => label.setColor('#ffffff'));
+  }
+
+  async _showLeaderboard() {
+    if (this.lbPanel) return;
+
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const container = this.add.container(0, 0).setDepth(50);
+    this.lbPanel = container;
+
+    // Backdrop
+    const backdrop = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.7).setInteractive();
+    container.add(backdrop);
+    backdrop.on('pointerdown', () => this._closeLeaderboard());
+
+    // Panel
+    const pw = 500;
+    const ph = 480;
+    const px = w / 2 - pw / 2;
+    const py = h / 2 - ph / 2;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1e, 0.98);
+    bg.fillRoundedRect(px, py, pw, ph, 10);
+    bg.lineStyle(2, 0xf97316, 0.8);
+    bg.strokeRoundedRect(px, py, pw, ph, 10);
+    container.add(bg);
+
+    container.add(this.add.text(w / 2, py + 20, 'LEADERBOARD', {
+      fontFamily: 'monospace', fontSize: '18px', color: '#f97316', fontStyle: 'bold',
+    }).setOrigin(0.5));
+
+    // Column headers
+    const headerY = py + 50;
+    const cols = [px + 20, px + 50, px + 180, px + 260, px + 330, px + 410];
+    const headers = ['#', 'Player', 'Depth', 'Kills', 'Gold', 'Zone'];
+    headers.forEach((hdr, i) => {
+      container.add(this.add.text(cols[i], headerY, hdr, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#888899', fontStyle: 'bold',
+      }));
+    });
+
+    // Separator
+    const sep = this.add.graphics();
+    sep.lineStyle(1, 0x333355, 0.6);
+    sep.lineBetween(px + 10, headerY + 16, px + pw - 10, headerY + 16);
+    container.add(sep);
+
+    // Loading text
+    const loadingText = this.add.text(w / 2, py + ph / 2, 'Loading...', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#aaaacc',
+    }).setOrigin(0.5);
+    container.add(loadingText);
+
+    // Fetch leaderboard
+    const entries = await getLeaderboard();
+    loadingText.destroy();
+
+    if (entries.length === 0) {
+      container.add(this.add.text(w / 2, py + ph / 2, 'No scores yet. Be the first!', {
+        fontFamily: 'monospace', fontSize: '12px', color: '#888899',
+      }).setOrigin(0.5));
+    } else {
+      entries.slice(0, 20).forEach((entry, i) => {
+        const ey = headerY + 22 + i * 18;
+        const isMe = isLoggedIn() && entry.username === getUsername();
+        const rowColor = isMe ? '#f0c040' : '#ccccdd';
+        const rankColor = i < 3 ? '#f97316' : rowColor;
+
+        container.add(this.add.text(cols[0], ey, `${entry.rank}`, {
+          fontFamily: 'monospace', fontSize: '10px', color: rankColor, fontStyle: i < 3 ? 'bold' : 'normal',
+        }));
+        container.add(this.add.text(cols[1], ey, entry.username, {
+          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        }));
+        container.add(this.add.text(cols[2], ey, `${entry.depth}`, {
+          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        }));
+        container.add(this.add.text(cols[3], ey, `${entry.kills}`, {
+          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        }));
+        container.add(this.add.text(cols[4], ey, `${entry.gold}`, {
+          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        }));
+        container.add(this.add.text(cols[5], ey, entry.zone || '', {
+          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        }));
+      });
+    }
+
+    // Close button
+    this._createModalButton(container, w / 2, py + ph - 30, 120, 30, 'Close', 0x333355, () => {
+      this._closeLeaderboard();
+    });
+  }
+
+  _closeLeaderboard() {
+    if (this.lbPanel) {
+      this.lbPanel.destroy();
+      this.lbPanel = null;
     }
   }
 }

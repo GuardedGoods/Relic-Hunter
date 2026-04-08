@@ -45,6 +45,7 @@ export class GameScene extends Phaser.Scene {
       bestItem: null,
       startDepth: 0,
       died: false,
+      startTime: Date.now(),
     };
 
     // Each run starts at depth 0 (maxDepthReached is only for zone unlocks)

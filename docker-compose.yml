@@ -7,6 +7,20 @@ services:
     ports:
       - "8049:80"
     restart: unless-stopped
+    depends_on:
+      - api
+
+  api:
+    image: ghcr.io/guardedgoods/relic-hunter-api:latest
+    container_name: relic-api
+    ports:
+      - "8050:3001"
+    volumes:
+      - relic-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  relic-data:
 
 # ═══════════════════════════════════════════════════════════════════
 # SYNOLOGY NAS DEPLOYMENT
@@ -18,9 +32,10 @@ services:
 # 4. Paste this entire file as the docker-compose content
 # 5. Click "Build & Start"
 # 6. Play at http://dukestack.com:8049
+#    API at http://dukestack.com:8050
 #
-# The image is automatically built and published to GitHub Container
-# Registry whenever code is pushed to the main branch.
+# The images are automatically built and published to GitHub
+# Container Registry whenever code is pushed to the main branch.
 #
 # To update to the latest version:
 #   Container Manager → Project → relic-hunter → Action → Build
