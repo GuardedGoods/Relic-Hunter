@@ -62,7 +62,7 @@ export class BootScene extends Phaser.Scene {
 
     // Initialize global game state on registry
     this.registry.set('runStats', null);
-    this.registry.set('selectedZone', 'crypt');
+    this.registry.set('selectedZone', 'ashveil');
     this.registry.set('currentDepth', 0);
     this.registry.set('enemiesKilled', 0);
     this.registry.set('itemsFound', []);

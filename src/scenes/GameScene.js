@@ -150,6 +150,60 @@ export class GameScene extends Phaser.Scene {
     // ---- Retreat button (top-right of combat area) ----
     this._createRetreatButton();
 
+    // ---- Manage Gear (pause) button ----
+    this.isPaused = false;
+    const pauseBtnW = 160;
+    const pauseBtnH = 36;
+    const pauseBtnX = 250; // center of combat area
+    const pauseBtnY = height - 30;
+    this.pauseBtnBg = this.add.graphics();
+    this.pauseBtnBg.fillStyle(0x0f3460, 1);
+    this.pauseBtnBg.fillRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+    this.pauseBtnBg.lineStyle(2, 0xe94560, 1);
+    this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+
+    this.pauseBtnText = this.add.text(pauseBtnX, pauseBtnY, '⚔ MANAGE GEAR', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#e94560', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    this.pauseHitArea = this.add.rectangle(pauseBtnX, pauseBtnY, pauseBtnW, pauseBtnH)
+      .setInteractive({ useHandCursor: true })
+      .setAlpha(0.001);
+
+    this.pauseHitArea.on('pointerover', () => {
+      this.pauseBtnBg.clear();
+      this.pauseBtnBg.fillStyle(0x1a4a80, 1);
+      this.pauseBtnBg.fillRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+      this.pauseBtnBg.lineStyle(2, 0xff6680, 1);
+      this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+    });
+
+    this.pauseHitArea.on('pointerout', () => {
+      this._updatePauseButton();
+    });
+
+    this.pauseHitArea.on('pointerdown', () => {
+      this.togglePause();
+    });
+
+    // Pause overlay
+    this.pauseOverlay = this.add.graphics();
+    this.pauseOverlay.setVisible(false);
+    this.pauseOverlay.setDepth(50);
+
+    this.pauseText = this.add.text(250, height / 2 - 40, '', {
+      fontFamily: 'monospace', fontSize: '20px', color: '#e94560', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(51).setVisible(false);
+
+    this.pauseSubText = this.add.text(250, height / 2, '', {
+      fontFamily: 'monospace', fontSize: '12px', color: '#aaaacc',
+    }).setOrigin(0.5).setDepth(51).setVisible(false);
+
+    // Space bar to toggle pause
+    this.input.keyboard.on('keydown-SPACE', () => {
+      this.togglePause();
+    });
+
     // ---- Auto-save timer ----
     this.autoSaveTimer = 0;
 
@@ -448,6 +502,11 @@ export class GameScene extends Phaser.Scene {
     // Emit to UIScene
     this.events.emit('lootDrop', { item });
 
+    // Auto-pause when inventory becomes full to let player manage gear
+    if (this.player.isInventoryFull() && !this.isPaused) {
+      this.togglePause();
+    }
+
     // Show loot text in combat area
     const color = RARITY_COLORS[item.rarity] || '#ffffff';
     this._addCombatLog(`Loot: ${item.name}`, color);
@@ -664,6 +723,54 @@ export class GameScene extends Phaser.Scene {
       this.runStats.died = false;
       this._endRun();
     });
+  }
+
+  // ---- Pause / manage gear ----
+
+  togglePause() {
+    this.isPaused = !this.isPaused;
+    this.combatSystem.togglePause();
+    this._updatePauseButton();
+
+    if (this.isPaused) {
+      // Show pause overlay on combat area
+      this.pauseOverlay.clear();
+      this.pauseOverlay.fillStyle(0x000000, 0.5);
+      this.pauseOverlay.fillRect(0, 0, 500, this.scale.height);
+      this.pauseOverlay.setVisible(true);
+      this.pauseText.setText('COMBAT PAUSED').setVisible(true);
+      this.pauseSubText.setText('Manage your inventory and equipment\nClick RESUME to continue fighting').setVisible(true);
+    } else {
+      this.pauseOverlay.setVisible(false);
+      this.pauseText.setVisible(false);
+      this.pauseSubText.setVisible(false);
+    }
+
+    // Notify UIScene about pause state
+    this.events.emit('pauseToggled', this.isPaused);
+  }
+
+  _updatePauseButton() {
+    const { height } = this.scale;
+    const pauseBtnW = 160;
+    const pauseBtnH = 36;
+    const pauseBtnX = 250;
+    const pauseBtnY = height - 30;
+
+    this.pauseBtnBg.clear();
+    if (this.isPaused) {
+      this.pauseBtnBg.fillStyle(0x2d5a27, 1);
+      this.pauseBtnBg.fillRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+      this.pauseBtnBg.lineStyle(2, 0x4ade80, 1);
+      this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+      this.pauseBtnText.setText('▶ RESUME COMBAT').setColor('#4ade80');
+    } else {
+      this.pauseBtnBg.fillStyle(0x0f3460, 1);
+      this.pauseBtnBg.fillRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+      this.pauseBtnBg.lineStyle(2, 0xe94560, 1);
+      this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
+      this.pauseBtnText.setText('⚔ MANAGE GEAR').setColor('#e94560');
+    }
   }
 
   // ---- End run ----

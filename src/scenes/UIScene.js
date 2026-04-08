@@ -54,7 +54,7 @@ export class UIScene extends Phaser.Scene {
     const panelX = UI_X;
     const panelY = 4;
     const panelW = UI_W;
-    const panelH = 140;
+    const panelH = 120;
 
     const bg = this.add.graphics().setDepth(1);
     bg.fillStyle(PANEL_COLOR, 0.95);
@@ -92,7 +92,7 @@ export class UIScene extends Phaser.Scene {
 
     const sx = panelX + 14;
     const sy = panelY + 30;
-    const lineH = 22;
+    const lineH = 20;
 
     leftCol.forEach((s, i) => {
       const val = stats[s.key] || 0;
@@ -175,9 +175,9 @@ export class UIScene extends Phaser.Scene {
 
   _drawEquipmentPanel() {
     const panelX = UI_X;
-    const panelY = 150;
+    const panelY = 130;
     const panelW = UI_W;
-    const panelH = 200;
+    const panelH = 170;
 
     const bg = this.add.graphics().setDepth(1);
     bg.fillStyle(PANEL_COLOR, 0.95);
@@ -202,7 +202,7 @@ export class UIScene extends Phaser.Scene {
     this.equipSlotElements = [];
 
     const panelX = UI_X;
-    const panelY = 150;
+    const panelY = 130;
     const panelW = UI_W;
 
     const slotKeys = [
@@ -215,8 +215,8 @@ export class UIScene extends Phaser.Scene {
       { key: 'ring2', label: 'Ring 2' },
     ];
 
-    const slotH = 24;
-    const startY = panelY + 32;
+    const slotH = 20;
+    const startY = panelY + 30;
 
     slotKeys.forEach((slot, i) => {
       const sy = startY + i * slotH;
@@ -286,9 +286,9 @@ export class UIScene extends Phaser.Scene {
 
   _drawInventoryPanel() {
     this.invPanelX = UI_X;
-    this.invPanelY = 356;
+    this.invPanelY = 306;
     this.invPanelW = UI_W;
-    const panelH = 280;
+    const panelH = 330;
 
     const bg = this.add.graphics().setDepth(1);
     bg.fillStyle(PANEL_COLOR, 0.95);
@@ -314,19 +314,23 @@ export class UIScene extends Phaser.Scene {
     this.invCellElements = [];
 
     const panelX = this.invPanelX || UI_X;
-    const panelY = this.invPanelY || 356;
+    const panelY = this.invPanelY || 306;
     const panelW = this.invPanelW || UI_W;
+    const panelH = 330;
 
-    const cellW = (panelW - 40) / INVENTORY_COLS;
-    const cellH = 56;
-    const startX = panelX + 14;
-    const startY = panelY + 32;
+    const padding = 14;
+    const headerHeight = 32;
+    const gap = 4;
+    const cellW = Math.floor((panelW - padding * 2 - (INVENTORY_COLS - 1) * gap) / INVENTORY_COLS);
+    const cellH = Math.floor((panelH - headerHeight - padding * 2 - (INVENTORY_ROWS - 1) * gap) / INVENTORY_ROWS);
+    const startX = panelX + padding;
+    const startY = panelY + headerHeight;
 
     for (let row = 0; row < INVENTORY_ROWS; row++) {
       for (let col = 0; col < INVENTORY_COLS; col++) {
         const idx = row * INVENTORY_COLS + col;
-        const cx = startX + col * (cellW + 4);
-        const cy = startY + row * (cellH + 4);
+        const cx = startX + col * (cellW + gap);
+        const cy = startY + row * (cellH + gap);
         const item = this.player.inventory[idx] || null;
 
         const cellBg = this.add.graphics().setDepth(2);
@@ -338,27 +342,27 @@ export class UIScene extends Phaser.Scene {
 
         if (item) {
           const rarityColor = RARITY_COLORS[item.rarity] || '#ffffff';
-          const displayName = item.name.length > 12 ? item.name.substring(0, 11) + '.' : item.name;
+          const displayName = item.name.length > 9 ? item.name.substring(0, 8) + '.' : item.name;
 
-          const itemText = this.add.text(cx + cellW / 2, cy + 16, displayName, {
+          const itemText = this.add.text(cx + cellW / 2, cy + 14, displayName, {
             fontFamily: 'monospace',
-            fontSize: '10px',
+            fontSize: '8px',
             color: rarityColor,
             align: 'center',
           }).setOrigin(0.5).setDepth(3);
           this.invCellElements.push(itemText);
 
-          const slotText = this.add.text(cx + cellW / 2, cy + 34, item.slot, {
+          const slotText = this.add.text(cx + cellW / 2, cy + 30, item.slot, {
             fontFamily: 'monospace',
-            fontSize: '8px',
+            fontSize: '7px',
             color: '#666677',
           }).setOrigin(0.5).setDepth(3);
           this.invCellElements.push(slotText);
 
           const score = getItemScore(item);
-          const scoreText = this.add.text(cx + cellW - 4, cy + 4, score.toFixed(1), {
+          const scoreText = this.add.text(cx + cellW - 3, cy + 3, score.toFixed(1), {
             fontFamily: 'monospace',
-            fontSize: '8px',
+            fontSize: '7px',
             color: '#888899',
           }).setOrigin(1, 0).setDepth(3);
           this.invCellElements.push(scoreText);
@@ -639,10 +643,14 @@ export class UIScene extends Phaser.Scene {
       const idx = this.player.inventory.length - 1;
       const col = idx % INVENTORY_COLS;
       const row = Math.floor(idx / INVENTORY_COLS);
-      const cellW = (UI_W - 40) / INVENTORY_COLS;
-      const cellH = 56;
-      const fx = UI_X + 14 + col * (cellW + 4) + cellW / 2;
-      const fy = (this.invPanelY || 356) + 32 + row * (cellH + 4) + cellH / 2;
+      const invPanelH = 330;
+      const invPadding = 14;
+      const invHeaderH = 32;
+      const invGap = 4;
+      const cellW = Math.floor((UI_W - invPadding * 2 - (INVENTORY_COLS - 1) * invGap) / INVENTORY_COLS);
+      const cellH = Math.floor((invPanelH - invHeaderH - invPadding * 2 - (INVENTORY_ROWS - 1) * invGap) / INVENTORY_ROWS);
+      const fx = UI_X + invPadding + col * (cellW + invGap) + cellW / 2;
+      const fy = (this.invPanelY || 326) + invHeaderH + row * (cellH + invGap) + cellH / 2;
 
       const flash = this.add.graphics().setDepth(10);
       const rColorInt = Phaser.Display.Color.HexStringToColor(RARITY_COLORS[item.rarity] || '#ffffff').color;
@@ -666,92 +674,201 @@ export class UIScene extends Phaser.Scene {
     const container = this.add.container(0, 0).setDepth(40);
     this.lootPopup = container;
 
-    // Backdrop
-    const backdrop = this.add.rectangle(480, 320, 960, 640, 0x000000, 0.5)
+    // Backdrop - blocks interaction behind popup
+    const backdrop = this.add.rectangle(480, 320, 960, 640, 0x000000, 0.6)
       .setOrigin(0.5)
       .setInteractive()
       .setDepth(0);
     container.add(backdrop);
 
-    const popW = 320;
-    const affixCount = item.affixes ? item.affixes.length : 0;
-    const popH = 160 + affixCount * 16 + 50;
-    const popX = 320;
-    const popY = 320 - popH / 2;
+    // Find the 3 worst items in inventory by score for quick-discard
+    const scoredInventory = this.player.inventory
+      .map(inv => ({ item: inv, score: getItemScore(inv) }))
+      .sort((a, b) => a.score - b.score);
+    const worstItems = scoredInventory.slice(0, 3);
 
-    // Background
+    const popW = 360;
+    const affixCount = item.affixes ? item.affixes.length : 0;
+    const newItemScore = getItemScore(item);
+    // Calculate dynamic height: header + item info + affixes + warning + buttons + worst items
+    const popH = 210 + affixCount * 16 + worstItems.length * 22 + 20;
+    const popX = 300;
+    const popY = Math.max(10, 320 - popH / 2);
+
+    // Background with prominent border
+    const rarityColorInt = Phaser.Display.Color.HexStringToColor(RARITY_COLORS[item.rarity] || '#ffffff').color;
     const bg = this.add.graphics().setDepth(1);
     bg.fillStyle(0x1a1a2e, 0.98);
     bg.fillRoundedRect(popX, popY, popW, popH, 10);
-    bg.lineStyle(2, ACCENT, 0.9);
+    bg.lineStyle(2, rarityColorInt, 0.9);
     bg.strokeRoundedRect(popX, popY, popW, popH, 10);
     container.add(bg);
 
-    // Warning
-    container.add(this.add.text(popX + popW / 2, popY + 20, 'INVENTORY FULL!', {
+    let cy = popY + 16;
+
+    // NEW ITEM header
+    container.add(this.add.text(popX + popW / 2, cy, 'NEW ITEM', {
       fontFamily: 'monospace',
-      fontSize: '16px',
-      color: '#e94560',
+      fontSize: '14px',
+      color: '#f0c040',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2));
+    cy += 22;
 
-    // Item name
-    container.add(this.add.text(popX + popW / 2, popY + 50, item.name, {
+    // Item name (colored by rarity)
+    container.add(this.add.text(popX + popW / 2, cy, item.name, {
       fontFamily: 'monospace',
       fontSize: '14px',
       color: RARITY_COLORS[item.rarity] || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2));
+    cy += 20;
 
-    // Rarity + slot
-    container.add(this.add.text(popX + popW / 2, popY + 70, `${item.rarity.toUpperCase()} ${item.slot.toUpperCase()}`, {
+    // Rarity + slot + score
+    container.add(this.add.text(popX + popW / 2, cy, `${item.rarity.toUpperCase()} ${item.slot.toUpperCase()}  |  Score: ${newItemScore.toFixed(1)}`, {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2));
+    cy += 16;
+
+    // Separator
+    const sep = this.add.graphics().setDepth(2);
+    sep.lineStyle(1, 0x333355, 1);
+    sep.lineBetween(popX + 15, cy, popX + popW - 15, cy);
+    container.add(sep);
+    cy += 8;
 
     // Affixes
-    let ay = popY + 90;
     if (item.affixes) {
       for (const affix of item.affixes) {
-        container.add(this.add.text(popX + 20, ay, formatAffix(affix), {
+        container.add(this.add.text(popX + 20, cy, formatAffix(affix), {
           fontFamily: 'monospace',
           fontSize: '10px',
           color: '#ccddee',
         }).setDepth(2));
-        ay += 16;
+        cy += 16;
       }
     }
+    cy += 6;
 
-    // Discard new item button
-    const btnY = popY + popH - 45;
-    const btnW = 130;
-    const btnH = 32;
-    const btnX = popX + popW / 2 - btnW / 2;
-
-    const discardG = this.add.graphics().setDepth(2);
-    discardG.fillStyle(0x7a2a2a, 1);
-    discardG.fillRoundedRect(btnX, btnY, btnW, btnH, 5);
-    container.add(discardG);
-
-    container.add(this.add.text(btnX + btnW / 2, btnY + btnH / 2, 'Discard New', {
+    // INVENTORY FULL warning
+    container.add(this.add.text(popX + popW / 2, cy, 'INVENTORY FULL - Make room!', {
       fontFamily: 'monospace',
       fontSize: '12px',
-      color: '#ffffff',
+      color: '#e94560',
       fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(3));
+    }).setOrigin(0.5).setDepth(2));
+    cy += 22;
 
-    const discardHit = this.add.rectangle(btnX + btnW / 2, btnY + btnH / 2, btnW, btnH)
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .setAlpha(0.001)
-      .setDepth(4);
-    container.add(discardHit);
+    // Action buttons row
+    const btnH = 28;
+    const btnGap = 6;
 
-    discardHit.on('pointerdown', () => {
-      this._hideLootPopup();
-      this._showFloatingMessage(`Discarded ${item.name}`, '#888899');
-    });
+    // Check if item can be equipped (matching slot exists)
+    const canEquip = item.slot && Object.values(SLOT).includes(item.slot);
+
+    if (canEquip) {
+      // Three buttons: Equip, Discard New, Quick Discard Worst
+      const btnW = Math.floor((popW - 40 - btnGap * 2) / 3);
+      const eqBtnX = popX + 14;
+      this._createTooltipButton(container, eqBtnX, cy, btnW, btnH, 'Equip', 0x2a7a2a, 0x33aa33, () => {
+        // Equip the new item directly (swap with equipped)
+        const oldItem = this.player.equip(item);
+        if (oldItem) {
+          this.player.addToInventory(oldItem);
+        }
+        const stats = this.player.getComputedStats();
+        this.player.stats = stats;
+        this._hideLootPopup();
+        this._refreshAll();
+        this._showFloatingMessage(`Equipped ${item.name}`, RARITY_COLORS[item.rarity] || '#ffffff');
+      });
+
+      const dBtnX = eqBtnX + btnW + btnGap;
+      this._createTooltipButton(container, dBtnX, cy, btnW, btnH, 'Discard New', 0x7a2a2a, 0xaa3333, () => {
+        this._hideLootPopup();
+        this._showFloatingMessage(`Discarded ${item.name}`, '#888899');
+      });
+
+      const qBtnX = dBtnX + btnW + btnGap;
+      this._createTooltipButton(container, qBtnX, cy, btnW, btnH, 'Quick Discard', 0x6a4a1a, 0x8a6a2a, () => {
+        if (worstItems.length > 0) {
+          const worst = worstItems[0].item;
+          this.player.removeFromInventory(worst.id);
+          this.player.addToInventory(item);
+          this._hideLootPopup();
+          this._refreshAll();
+          this._showFloatingMessage(`Replaced ${worst.name} with ${item.name}`, '#f0c040');
+        }
+      });
+    } else {
+      // Two buttons: Discard New, Quick Discard Worst
+      const btnW = Math.floor((popW - 40 - btnGap) / 2);
+      const dBtnX = popX + 14;
+      this._createTooltipButton(container, dBtnX, cy, btnW, btnH, 'Discard New', 0x7a2a2a, 0xaa3333, () => {
+        this._hideLootPopup();
+        this._showFloatingMessage(`Discarded ${item.name}`, '#888899');
+      });
+
+      const qBtnX = dBtnX + btnW + btnGap;
+      this._createTooltipButton(container, qBtnX, cy, btnW, btnH, 'Quick Discard Worst', 0x6a4a1a, 0x8a6a2a, () => {
+        if (worstItems.length > 0) {
+          const worst = worstItems[0].item;
+          this.player.removeFromInventory(worst.id);
+          this.player.addToInventory(item);
+          this._hideLootPopup();
+          this._refreshAll();
+          this._showFloatingMessage(`Replaced ${worst.name} with ${item.name}`, '#f0c040');
+        }
+      });
+    }
+    cy += btnH + 10;
+
+    // Separator before worst items
+    const sep2 = this.add.graphics().setDepth(2);
+    sep2.lineStyle(1, 0x333355, 1);
+    sep2.lineBetween(popX + 15, cy, popX + popW - 15, cy);
+    container.add(sep2);
+    cy += 8;
+
+    // Worst items section header
+    container.add(this.add.text(popX + popW / 2, cy, 'Worst items in inventory:', {
+      fontFamily: 'monospace',
+      fontSize: '9px',
+      color: '#777788',
+    }).setOrigin(0.5).setDepth(2));
+    cy += 14;
+
+    // List worst items as quick-discard options
+    for (const entry of worstItems) {
+      const w = entry.item;
+      const wColor = RARITY_COLORS[w.rarity] || '#ffffff';
+      const wName = w.name.length > 18 ? w.name.substring(0, 17) + '.' : w.name;
+
+      container.add(this.add.text(popX + 20, cy, `[X] ${wName} (${entry.score.toFixed(1)})`, {
+        fontFamily: 'monospace',
+        fontSize: '9px',
+        color: wColor,
+      }).setDepth(2));
+
+      const wHit = this.add.rectangle(popX + popW / 2, cy + 6, popW - 30, 18)
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .setAlpha(0.001)
+        .setDepth(4);
+      container.add(wHit);
+
+      wHit.on('pointerdown', () => {
+        this.player.removeFromInventory(w.id);
+        this.player.addToInventory(item);
+        this._hideLootPopup();
+        this._refreshAll();
+        this._showFloatingMessage(`Discarded ${w.name}, kept ${item.name}`, '#f0c040');
+      });
+
+      cy += 22;
+    }
   }
 
   _hideLootPopup() {
@@ -779,7 +896,7 @@ export class UIScene extends Phaser.Scene {
       }
     }
 
-    let sy = 340;
+    let sy = 300;
     for (const [setId, count] of Object.entries(setCounts)) {
       const setDef = ITEM_SETS[setId];
       if (!setDef) continue;
