@@ -332,6 +332,10 @@ export class UIScene extends Phaser.Scene {
     const discStartX = panelX + panelW - (discardRarities.length * (discBtnW + 3)) - 10;
     const discY = panelY + 4;
 
+    this.add.text(discStartX - 50, discY + discBtnH / 2, 'Discard:', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#666677',
+    }).setOrigin(0, 0.5).setDepth(2);
+
     discardRarities.forEach((dr, i) => {
       const dx = discStartX + i * (discBtnW + 3);
       const bg2 = this.add.graphics().setDepth(2);
@@ -356,49 +360,22 @@ export class UIScene extends Phaser.Scene {
         }
       });
 
-      // Tooltip on hover
       hit.on('pointerover', () => {
         label.setColor('#ffffff');
+        // Show a small hint
+        if (!this._discardHint) {
+          this._discardHint = this.add.text(dx + discBtnW / 2, discY - 12, `Discard ${dr.rarity}`, {
+            fontFamily: 'monospace', fontSize: '8px', color: '#ffffff',
+            backgroundColor: '#000000aa', padding: { x: 3, y: 1 },
+          }).setOrigin(0.5).setDepth(10);
+        }
       });
       hit.on('pointerout', () => {
         label.setColor(dr.color);
+        if (this._discardHint) { this._discardHint.destroy(); this._discardHint = null; }
       });
     });
 
-    // Loot filter initialization
-    if (!this.player.lootFilter) {
-      this.player.lootFilter = {};
-    }
-
-    // Filter toggles
-    const filterY = discY + discBtnH + 4;
-    this.add.text(discStartX - 30, filterY + 2, 'Skip:', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#555566',
-    }).setDepth(2);
-
-    discardRarities.forEach((dr, i) => {
-      const fx = discStartX + i * (discBtnW + 3);
-      const isFiltered = this.player.lootFilter && this.player.lootFilter[dr.rarity];
-
-      const filterBg = this.add.graphics().setDepth(2);
-      filterBg.fillStyle(isFiltered ? 0x442222 : 0x111128, 1);
-      filterBg.fillRoundedRect(fx, filterY, discBtnW, discBtnH, 3);
-
-      const filterLabel = this.add.text(fx + discBtnW / 2, filterY + discBtnH / 2,
-        isFiltered ? '✕' : dr.label, {
-        fontFamily: 'monospace', fontSize: '9px',
-        color: isFiltered ? '#e94560' : '#444455', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(3);
-
-      const filterHit = this.add.rectangle(fx + discBtnW / 2, filterY + discBtnH / 2, discBtnW, discBtnH)
-        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
-
-      filterHit.on('pointerdown', () => {
-        if (!this.player.lootFilter) this.player.lootFilter = {};
-        this.player.lootFilter[dr.rarity] = !this.player.lootFilter[dr.rarity];
-        this._refreshAll();
-      });
-    });
 
     this._refreshInventoryGrid();
   }
@@ -503,7 +480,6 @@ export class UIScene extends Phaser.Scene {
             cellBg.fillRoundedRect(cx, cy, cellW, cellH, 4);
             cellBg.lineStyle(1, rColorInt, 1);
             cellBg.strokeRoundedRect(cx, cy, cellW, cellH, 4);
-            this._showItemTooltip(item);
           });
           hitArea.on('pointerout', () => {
             cellBg.clear();
@@ -511,7 +487,6 @@ export class UIScene extends Phaser.Scene {
             cellBg.fillRoundedRect(cx, cy, cellW, cellH, 4);
             cellBg.lineStyle(1, 0x555577, 1);
             cellBg.strokeRoundedRect(cx, cy, cellW, cellH, 4);
-            this._hideTooltip();
           });
           hitArea.on('pointerdown', () => {
             this._showItemTooltip(item);
@@ -756,12 +731,6 @@ export class UIScene extends Phaser.Scene {
 
   _onLootDrop(data) {
     const { item } = data;
-
-    // Check loot filter
-    if (this.player.lootFilter && this.player.lootFilter[item.rarity]) {
-      this._showFloatingMessage(`Filtered: ${item.name}`, '#555566');
-      return;
-    }
 
     if (!this.player.isInventoryFull()) {
       this.player.addToInventory(item);

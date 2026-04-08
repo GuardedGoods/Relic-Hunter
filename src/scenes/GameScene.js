@@ -386,6 +386,9 @@ export class GameScene extends Phaser.Scene {
     // Update health bars
     this._updatePlayerHealthBar();
 
+    // Redraw player to reflect equipment changes
+    this._drawPlayer();
+
     // Update ability cooldown displays
     this._updateAbilityBar();
 
@@ -421,55 +424,151 @@ export class GameScene extends Phaser.Scene {
     const g = this.playerGfx;
     const px = this.playerX;
     const py = this.playerY;
+    const eq = this.player.equipment || {};
     g.clear();
-    // Legs
-    g.fillStyle(0x334455, 1);
-    g.fillRect(px - 14, py + 15, 10, 20);
-    g.fillRect(px + 4, py + 15, 10, 20);
+
+    // Helper: get rarity-based color for equipped item, or default
+    const slotColor = (slot, defaultColor) => {
+      const item = eq[slot];
+      if (!item) return defaultColor;
+      const rc = RARITY_COLORS[item.rarity];
+      return rc ? Phaser.Display.Color.HexStringToColor(rc).color : defaultColor;
+    };
+
+    // Cape (drawn first, behind everything)
+    const capeColor = eq.chest ? slotColor('chest', 0x1a4a3a) : 0x1a4a3a;
+    g.fillStyle(capeColor, 0.4);
+    g.fillTriangle(px - 14, py - 14, px + 14, py - 14, px, py + 28);
+
+    // Legs (colored by boots)
+    const legColor = eq.boots ? slotColor('boots', 0x334455) : 0x334455;
+    g.fillStyle(legColor, 0.8);
+    g.fillRect(px - 12, py + 15, 9, 18);
+    g.fillRect(px + 3, py + 15, 9, 18);
+
     // Boots
-    g.fillStyle(0x5a3a1a, 1);
-    g.fillRect(px - 16, py + 30, 14, 6);
-    g.fillRect(px + 2, py + 30, 14, 6);
-    // Torso (armor)
-    g.fillStyle(0x2a6a4a, 1);
-    g.fillRect(px - 18, py - 18, 36, 34);
-    g.lineStyle(1, 0x3a8a6a, 1);
-    g.strokeRect(px - 18, py - 18, 36, 34);
+    const bootColor = slotColor('boots', 0x5a3a1a);
+    g.fillStyle(bootColor, 1);
+    g.fillRect(px - 14, py + 30, 13, 6);
+    g.fillRect(px + 1, py + 30, 13, 6);
+    if (eq.boots) {
+      // Armored boots — add shin guards
+      g.lineStyle(1, bootColor, 0.8);
+      g.strokeRect(px - 13, py + 22, 11, 10);
+      g.strokeRect(px + 2, py + 22, 11, 10);
+    }
+
+    // Torso / Chest armor
+    const chestColor = slotColor('chest', 0x2a5040);
+    g.fillStyle(chestColor, 1);
+    g.fillRect(px - 17, py - 16, 34, 32);
+    g.lineStyle(1, 0xffffff, 0.15);
+    g.strokeRect(px - 17, py - 16, 34, 32);
+    if (eq.chest) {
+      // Chest detail — center emblem
+      g.fillStyle(0xffffff, 0.12);
+      g.fillCircle(px, py, 6);
+      // Shoulder trim
+      g.lineStyle(1, chestColor, 1);
+      g.lineBetween(px - 17, py - 10, px + 17, py - 10);
+    }
+
     // Belt
     g.fillStyle(0x7a5a2a, 1);
-    g.fillRect(px - 18, py + 12, 36, 5);
+    g.fillRect(px - 17, py + 13, 34, 4);
+    // Belt buckle
+    if (eq.ring) {
+      const ringColor = slotColor('ring', 0xf0c040);
+      g.fillStyle(ringColor, 1);
+      g.fillCircle(px, py + 15, 3);
+    }
+
     // Shoulder pads
-    g.fillStyle(0x3a7a5a, 1);
-    g.fillRect(px - 22, py - 18, 8, 10);
-    g.fillRect(px + 14, py - 18, 8, 10);
+    const shoulderColor = eq.chest ? slotColor('chest', 0x3a6a5a) : 0x3a6a5a;
+    g.fillStyle(shoulderColor, 1);
+    g.fillRect(px - 21, py - 16, 7, 9);
+    g.fillRect(px + 14, py - 16, 7, 9);
+    if (eq.chest) {
+      // Spikes/studs on shoulders
+      g.fillStyle(0xffffff, 0.2);
+      g.fillCircle(px - 18, py - 13, 2);
+      g.fillCircle(px + 17, py - 13, 2);
+    }
+
     // Arms
-    g.fillStyle(0x2a6a4a, 1);
-    g.fillRect(px - 24, py - 8, 8, 20);
-    g.fillRect(px + 16, py - 8, 8, 20);
+    const armColor = eq.chest ? chestColor : 0x2a5040;
+    g.fillStyle(armColor, 0.9);
+    g.fillRect(px - 23, py - 6, 7, 18);
+    g.fillRect(px + 16, py - 6, 7, 18);
+
     // Gloves
-    g.fillStyle(0x5a3a1a, 1);
+    const gloveColor = slotColor('gloves', 0x5a3a1a);
+    g.fillStyle(gloveColor, 1);
     g.fillCircle(px - 20, py + 14, 5);
-    g.fillCircle(px + 20, py + 14, 5);
-    // Head
+    g.fillCircle(px + 19, py + 14, 5);
+    if (eq.gloves) {
+      // Armored knuckles
+      g.lineStyle(1, gloveColor, 0.6);
+      g.strokeCircle(px - 20, py + 14, 6);
+      g.strokeCircle(px + 19, py + 14, 6);
+    }
+
+    // Head (skin)
     g.fillStyle(0xddbbaa, 1);
-    g.fillCircle(px, py - 28, 12);
+    g.fillCircle(px, py - 27, 11);
+
     // Helmet
-    g.fillStyle(0x4a8a6a, 1);
-    g.fillRect(px - 13, py - 40, 26, 12);
-    g.lineStyle(1, 0x5aaa8a, 1);
-    g.strokeRect(px - 13, py - 40, 26, 12);
-    // Visor slit
-    g.fillStyle(0x111111, 1);
-    g.fillRect(px - 8, py - 33, 16, 3);
-    // Weapon (sword)
-    g.lineStyle(3, 0xaaaacc, 1);
-    g.lineBetween(px + 24, py + 10, px + 36, py - 22);
-    // Sword guard
-    g.lineStyle(2, 0x7a5a2a, 1);
-    g.lineBetween(px + 20, py - 2, px + 30, py - 2);
-    // Cape (behind, subtle)
-    g.fillStyle(0x1a4a3a, 0.6);
-    g.fillTriangle(px - 14, py - 14, px + 14, py - 14, px, py + 25);
+    const helmColor = slotColor('helmet', 0x4a6a5a);
+    g.fillStyle(helmColor, 1);
+    if (eq.helmet) {
+      // Full helm
+      g.fillRect(px - 12, py - 39, 24, 14);
+      g.fillRect(px - 14, py - 35, 28, 6); // brim
+      g.lineStyle(1, 0xffffff, 0.15);
+      g.strokeRect(px - 12, py - 39, 24, 14);
+      // Visor
+      g.fillStyle(0x111111, 1);
+      g.fillRect(px - 7, py - 32, 14, 3);
+      // Crest (for rare+)
+      const helmItem = eq.helmet;
+      if (helmItem && ['rare', 'epic', 'legendary'].includes(helmItem.rarity)) {
+        const crestColor = Phaser.Display.Color.HexStringToColor(RARITY_COLORS[helmItem.rarity]).color;
+        g.fillStyle(crestColor, 0.8);
+        g.fillTriangle(px - 2, py - 39, px + 2, py - 39, px, py - 48);
+      }
+    } else {
+      // No helmet — just hair
+      g.fillStyle(0x553322, 1);
+      g.fillRect(px - 10, py - 37, 20, 8);
+    }
+
+    // Weapon
+    if (eq.weapon) {
+      const wpnColor = slotColor('weapon', 0xaaaacc);
+      g.lineStyle(3, wpnColor, 1);
+      g.lineBetween(px + 23, py + 10, px + 35, py - 20);
+      // Sword guard
+      g.lineStyle(2, 0x7a5a2a, 1);
+      g.lineBetween(px + 19, py, px + 29, py);
+      // Pommel gem (if rare+)
+      const wpnItem = eq.weapon;
+      if (wpnItem && ['rare', 'epic', 'legendary'].includes(wpnItem.rarity)) {
+        const gemColor = Phaser.Display.Color.HexStringToColor(RARITY_COLORS[wpnItem.rarity]).color;
+        g.fillStyle(gemColor, 1);
+        g.fillCircle(px + 24, py + 2, 2);
+      }
+    } else {
+      // Bare fist — just a small line
+      g.lineStyle(2, 0x888888, 0.5);
+      g.lineBetween(px + 22, py + 10, px + 28, py + 2);
+    }
+
+    // Ring glow (if equipped)
+    if (eq.ring) {
+      const ringColor = slotColor('ring', 0xf0c040);
+      g.fillStyle(ringColor, 0.15);
+      g.fillCircle(px, py, 40);
+    }
   }
 
   _drawEnemy() {
@@ -1213,7 +1312,7 @@ export class GameScene extends Phaser.Scene {
       if (ward && ward.charges > 0) {
         wardBtn.nameLabel.setText(`${ward.charges}`).setColor('#4ade80');
       } else {
-        wardBtn.nameLabel.setText('W').setColor('#888899');
+        wardBtn.nameLabel.setText('').setColor('#888899');
       }
     }
   }
