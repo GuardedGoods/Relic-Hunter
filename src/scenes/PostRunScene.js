@@ -218,6 +218,8 @@ export class PostRunScene extends Phaser.Scene {
         died: died || false,
         killedBy: runData.killedBy || '',
         highestDamage: runData.highestDamage || 0,
+        class: this.registry.get('classId') || 'slayer',
+        level: runData.level || 1,
       });
 
       this.add.text(width / 2, btnY - 20, 'Score submitted to leaderboard!', {

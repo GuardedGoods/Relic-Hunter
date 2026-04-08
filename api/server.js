@@ -59,6 +59,8 @@ db.exec(`
     died INTEGER DEFAULT 0,
     killed_by TEXT DEFAULT '',
     highest_damage INTEGER DEFAULT 0,
+    class TEXT DEFAULT 'slayer',
+    level INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
@@ -71,6 +73,12 @@ try {
 try {
   db.exec(`ALTER TABLE scores ADD COLUMN highest_damage INTEGER DEFAULT 0`);
 } catch (_) { /* column already exists */ }
+try {
+  db.exec(`ALTER TABLE scores ADD COLUMN class TEXT DEFAULT 'slayer'`);
+} catch (_) { /* column already exists */ }
+try {
+  db.exec(`ALTER TABLE scores ADD COLUMN level INTEGER DEFAULT 1`);
+} catch (_) { /* column already exists */ }
 
 // ---------------------------------------------------------------------------
 // Prepared statements
@@ -82,17 +90,17 @@ const stmts = {
   insertSession: db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)'),
   findSession: db.prepare('SELECT s.user_id, u.username FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ?'),
   insertScore: db.prepare(`
-    INSERT INTO scores (user_id, username, depth, kills, gold, zone, duration_seconds, died, killed_by, highest_damage)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO scores (user_id, username, depth, kills, gold, zone, duration_seconds, died, killed_by, highest_damage, class, level)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `),
   leaderboard: db.prepare(`
-    SELECT username, depth, kills, gold, zone, killed_by, highest_damage, created_at
+    SELECT username, depth, kills, gold, zone, killed_by, highest_damage, class, level, created_at
     FROM scores
     ORDER BY depth DESC, kills DESC, gold DESC
     LIMIT 50
   `),
   personalRuns: db.prepare(`
-    SELECT depth, kills, gold, zone, duration_seconds, died, killed_by, highest_damage, created_at
+    SELECT depth, kills, gold, zone, duration_seconds, died, killed_by, highest_damage, class, created_at
     FROM scores
     WHERE user_id = ?
     ORDER BY created_at DESC
@@ -229,6 +237,8 @@ app.post('/api/scores', requireAuth, (req, res) => {
     const safeDied = died ? 1 : 0;
     const safeKilledBy = (typeof killedBy === 'string' && killedBy.length <= 100) ? killedBy : '';
     const safeHighestDamage = (typeof highestDamage === 'number' && Number.isInteger(highestDamage) && highestDamage >= 0) ? highestDamage : 0;
+    const safeClass = (typeof req.body.class === 'string' && req.body.class.length <= 30) ? req.body.class : 'slayer';
+    const safeLevel = (typeof req.body.level === 'number' && Number.isInteger(req.body.level) && req.body.level >= 1) ? req.body.level : 1;
 
     stmts.insertScore.run(
       req.userId,
@@ -241,6 +251,8 @@ app.post('/api/scores', requireAuth, (req, res) => {
       safeDied,
       safeKilledBy,
       safeHighestDamage,
+      safeClass,
+      safeLevel,
     );
 
     res.status(201).json({ message: 'Score recorded.' });
@@ -263,6 +275,8 @@ app.get('/api/leaderboard', (_req, res) => {
       zone: row.zone,
       killed_by: row.killed_by || '',
       highest_damage: row.highest_damage || 0,
+      class: row.class || 'slayer',
+      level: row.level || 1,
       date: formatDate(row.created_at),
     }));
 

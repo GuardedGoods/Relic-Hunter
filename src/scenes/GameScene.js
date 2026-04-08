@@ -4,7 +4,7 @@ import { CombatSystem } from '../systems/CombatSystem.js';
 import { EmberStormSystem } from '../systems/EmberStormSystem.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { RARITY_COLORS, ZONES } from '../data/constants.js';
-import { CLASSES } from '../data/classes.js';
+import { CLASSES, TALENT_TIER_UNLOCK_POINTS } from '../data/classes.js';
 
 // Combat area layout constants
 const COMBAT_W = 680;
@@ -1562,8 +1562,10 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('runStats', {
       ...this.runStats,
       depthReached: this.currentDepth,
+      level: this.player.level || 1,
       player: this.player.toSaveData(),
     });
+    this.registry.set('classId', this.classId);
 
     // Stop UIScene
     this.scene.stop('UIScene');
@@ -1633,7 +1635,8 @@ export class GameScene extends Phaser.Scene {
       tree.tiers.forEach((talent, tierIdx) => {
         const ny = treeY + 55 + tierIdx * 70;
         const allocated = spentPoints[talent.id] || 0;
-        const unlocked = tierIdx === 0 || pointsInTree >= tierIdx;
+        const tierThreshold = TALENT_TIER_UNLOCK_POINTS[tierIdx] || 0;
+        const unlocked = pointsInTree >= tierThreshold;
         const canAllocate = available > 0 && allocated < talent.maxPoints && unlocked;
         const nodeColor = allocated > 0 ? Phaser.Display.Color.HexStringToColor(tree.color).color : (canAllocate ? 0x333355 : 0x1a1a2e);
         const borderColor = allocated > 0 ? Phaser.Display.Color.HexStringToColor(tree.color).color : (canAllocate ? 0x555577 : 0x222233);

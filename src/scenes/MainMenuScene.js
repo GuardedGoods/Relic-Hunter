@@ -641,8 +641,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Column headers
     const headerY = py + 50;
-    const cols = [px + 20, px + 50, px + 180, px + 250, px + 320];
-    const headers = ['#', 'Player', 'Depth', 'Kills', 'Killed By'];
+    const cols = [px + 15, px + 38, px + 120, px + 175, px + 215, px + 275, px + 355, px + 420];
+    const headers = ['#', 'Player', 'Class', 'Lv', 'Depth', 'Kills', 'Best Hit', 'Killed By'];
     headers.forEach((hdr, i) => {
       container.add(this.add.text(cols[i], headerY, hdr, {
         fontFamily: 'monospace', fontSize: '10px', color: '#888899', fontStyle: 'bold',
@@ -676,20 +676,31 @@ export class MainMenuScene extends Phaser.Scene {
         const rowColor = isMe ? '#f0c040' : '#ccccdd';
         const rankColor = i < 3 ? '#f97316' : rowColor;
 
+        const fs = '9px';
         container.add(this.add.text(cols[0], ey, `${entry.rank}`, {
-          fontFamily: 'monospace', fontSize: '10px', color: rankColor, fontStyle: i < 3 ? 'bold' : 'normal',
+          fontFamily: 'monospace', fontSize: fs, color: rankColor, fontStyle: i < 3 ? 'bold' : 'normal',
         }));
         container.add(this.add.text(cols[1], ey, entry.username, {
-          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+          fontFamily: 'monospace', fontSize: fs, color: rowColor,
         }));
-        container.add(this.add.text(cols[2], ey, `${entry.depth}`, {
-          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        const className = (entry.class || 'slayer').charAt(0).toUpperCase() + (entry.class || 'slayer').slice(1);
+        container.add(this.add.text(cols[2], ey, className, {
+          fontFamily: 'monospace', fontSize: fs, color: '#c084fc',
         }));
-        container.add(this.add.text(cols[3], ey, `${entry.kills}`, {
-          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        container.add(this.add.text(cols[3], ey, `${entry.level || 1}`, {
+          fontFamily: 'monospace', fontSize: fs, color: '#f0c040',
         }));
-        container.add(this.add.text(cols[4], ey, entry.killed_by || '--', {
-          fontFamily: 'monospace', fontSize: '10px', color: entry.killed_by ? '#e94560' : '#555566',
+        container.add(this.add.text(cols[4], ey, `${entry.depth}`, {
+          fontFamily: 'monospace', fontSize: fs, color: rowColor,
+        }));
+        container.add(this.add.text(cols[5], ey, `${entry.kills}`, {
+          fontFamily: 'monospace', fontSize: fs, color: rowColor,
+        }));
+        container.add(this.add.text(cols[6], ey, `${entry.highest_damage || 0}`, {
+          fontFamily: 'monospace', fontSize: fs, color: '#f97316',
+        }));
+        container.add(this.add.text(cols[7], ey, entry.killed_by || '--', {
+          fontFamily: 'monospace', fontSize: fs, color: entry.killed_by ? '#e94560' : '#555566',
         }));
       });
     }
