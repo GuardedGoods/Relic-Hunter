@@ -1,0 +1,26 @@
+# Dependencies - installed fresh during build via npm ci
+node_modules
+
+# Build output - regenerated during build
+dist
+
+# Version control - not needed in the image
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# Environment files - may contain secrets
+.env
+.env.*
+
+# IDE / OS files
+.vscode
+.idea
+.DS_Store
+
+# Docker files themselves (avoid recursive context)
+Dockerfile
+docker-compose.yml
+.dockerignore

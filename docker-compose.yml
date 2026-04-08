@@ -1,0 +1,26 @@
+# ============================================================
+# Relic Hunter - Docker Compose
+# Deploy on Synology NAS, access via *.dukestack.com
+#
+# Usage:
+#   docker compose up -d --build    # Build and start
+#   docker compose down             # Stop and remove
+#   docker compose up -d --build --force-recreate  # Rebuild after changes
+# ============================================================
+
+services:
+  relic-hunter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relic-hunter
+    ports:
+      # Host port 8080 -> container port 80
+      # Configure your Synology reverse proxy to route
+      # relic-hunter.dukestack.com -> localhost:8080
+      - "8080:80"
+    restart: unless-stopped
+    labels:
+      - "com.dukestack.app=relic-hunter"
+      - "com.dukestack.description=Relic Hunter - Loot-Focused Micro RPG"
+      - "com.dukestack.domain=relic-hunter.dukestack.com"
