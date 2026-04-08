@@ -85,7 +85,7 @@ export class UIScene extends Phaser.Scene {
     bg.lineStyle(1, PANEL_BORDER, 1);
     bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 6);
 
-    this.add.text(panelX + panelW / 2, panelY + 14, 'STATS', {
+    this.statsHeader = this.add.text(panelX + panelW / 2, panelY + 14, `STATS  Lv.${this.player.level || 1}`, {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#e94560',

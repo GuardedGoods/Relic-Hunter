@@ -130,18 +130,18 @@ export class GameScene extends Phaser.Scene {
     this._drawPlayer();
 
     // Player name label
-    this.add.text(this.playerX, this.playerY - 70, 'HERO', {
+    this.add.text(this.playerX, this.playerY - 80, 'HERO', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '12px',
       color: '#4ade80',
     }).setOrigin(0.5).setDepth(3);
 
     // Player health bar
     this.playerHealthBarBg = this.add.graphics().setDepth(3);
     this.playerHealthBarFill = this.add.graphics().setDepth(4);
-    this.playerHealthText = this.add.text(this.playerX, this.playerY - 48, '', {
+    this.playerHealthText = this.add.text(this.playerX, this.playerY - 62, '', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '10px',
       color: '#ffffff',
     }).setOrigin(0.5).setDepth(5);
     this._updatePlayerHealthBar();
@@ -153,16 +153,16 @@ export class GameScene extends Phaser.Scene {
     this._drawEnemy();
 
     // Enemy name label
-    this.enemyNameLabel = this.add.text(this.enemyX, this.enemyY - 70, '', {
+    this.enemyNameLabel = this.add.text(this.enemyX, this.enemyY - 80, '', {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '12px',
       color: '#ff6666',
     }).setOrigin(0.5).setDepth(3);
 
     // Elite badge
-    this.eliteBadge = this.add.text(this.enemyX, this.enemyY - 85, 'ELITE', {
+    this.eliteBadge = this.add.text(this.enemyX, this.enemyY - 92, 'ELITE', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '10px',
       color: '#f97316',
       fontStyle: 'bold',
       backgroundColor: '#3a1a00',
@@ -172,15 +172,15 @@ export class GameScene extends Phaser.Scene {
     // Enemy health bar
     this.enemyHealthBarBg = this.add.graphics().setDepth(3);
     this.enemyHealthBarFill = this.add.graphics().setDepth(4);
-    this.enemyHealthText = this.add.text(this.enemyX, this.enemyY - 48, '', {
+    this.enemyHealthText = this.add.text(this.enemyX, this.enemyY - 62, '', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '10px',
       color: '#ffffff',
     }).setOrigin(0.5).setDepth(5);
     this._updateEnemyDisplay();
 
     // ---- Level / XP display ----
-    this.levelLabel = this.add.text(20, height - 30, `Lv.${this.player.level}`, {
+    this.levelLabel = this.add.text(20, height - 50, `Lv.${this.player.level}`, {
       fontFamily: 'monospace',
       fontSize: '18px',
       color: '#f0c040',
@@ -188,7 +188,7 @@ export class GameScene extends Phaser.Scene {
 
     // ---- Combat log area ----
     this.combatLogTexts = [];
-    this.combatLogY = 480;
+    this.combatLogY = 410;
 
     // ---- Retreat button (top-right of combat area) ----
     this._createRetreatButton();
@@ -333,7 +333,7 @@ export class GameScene extends Phaser.Scene {
     const abGap = 6;
     const abTotalW = abilityDefs.length * abSize + (abilityDefs.length - 1) * abGap;
     const abStartX = COMBAT_CX - abTotalW / 2; // centered in combat area
-    const abBarY = 440;
+    const abBarY = 530;
 
     // Hotbar background strip
     const hotbarBg = this.add.graphics().setDepth(7);
@@ -457,7 +457,7 @@ export class GameScene extends Phaser.Scene {
         case 'bleedTick':
           this._spawnDamageNumber(
             this.enemyX + Phaser.Math.Between(-15, 15),
-            this.enemyY - 60,
+            this.enemyY - 100,
             `${event.data.damage}`,
             '#ff4444',
             '11px'
@@ -1007,7 +1007,7 @@ export class GameScene extends Phaser.Scene {
     const prefix = isCrit ? 'CRIT ' : '';
     this._spawnDamageNumber(
       this.enemyX + Phaser.Math.Between(-20, 20),
-      this.enemyY - 60,
+      this.enemyY - 100,
       `${prefix}${damage}`,
       color,
       size
@@ -1029,7 +1029,7 @@ export class GameScene extends Phaser.Scene {
     // Boss charged attack extra feedback
     if (isCharged) {
       this.cameras.main.shake(200, 0.015);
-      this._spawnDamageNumber(this.playerX, this.playerY - 80, 'CHARGED!', '#ff4444', '16px');
+      this._spawnDamageNumber(this.playerX, this.playerY - 100, 'CHARGED!', '#ff4444', '16px');
     }
 
     // Flash player
@@ -1074,7 +1074,7 @@ export class GameScene extends Phaser.Scene {
     // Gold number floating up
     this._spawnDamageNumber(
       this.enemyX,
-      this.enemyY - 80,
+      this.enemyY - 110,
       `+${actualGold}g`,
       '#f0c040',
       '13px'
@@ -1403,22 +1403,22 @@ export class GameScene extends Phaser.Scene {
     switch (result.type) {
       case 'cleave':
         this.cameras.main.flash(100, 200, 50, 50, true);
-        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `CLEAVE ${result.data.damage}`, '#e94560', '18px');
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 110, `CLEAVE ${result.data.damage}`, '#e94560', '18px');
         this._updateEnemyDisplay();
         this._addCombatLog('Cleave!', '#e94560');
         break;
       case 'rend':
-        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `REND (bleed)`, '#ff4444', '16px');
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 110, `REND (bleed)`, '#ff4444', '16px');
         this._addCombatLog('Rend! Bleeding...', '#ff4444');
         break;
       case 'execute':
         this.cameras.main.flash(200, 150, 20, 20, true);
-        this._spawnDamageNumber(this.enemyX, this.enemyY - 80, `EXECUTE ${result.data.damage}`, '#aa0000', '20px');
+        this._spawnDamageNumber(this.enemyX, this.enemyY - 110, `EXECUTE ${result.data.damage}`, '#aa0000', '20px');
         this._updateEnemyDisplay();
         this._addCombatLog('Execute!', '#aa0000');
         break;
       case 'emberVial':
-        this._spawnDamageNumber(this.playerX, this.playerY - 80, `+${result.data.healAmount} HP`, '#60a5fa', '16px');
+        this._spawnDamageNumber(this.playerX, this.playerY - 100, `+${result.data.healAmount} HP`, '#60a5fa', '16px');
         this._updatePlayerHealthBar();
         this.events.emit('playerHealthChanged', { health: this.player.health, maxHealth: this.player.stats.maxHealth });
         this._addCombatLog('Ember Vial!', '#60a5fa');
@@ -1661,6 +1661,14 @@ export class GameScene extends Phaser.Scene {
           container.add(hit);
           hit.on('pointerdown', () => {
             this.player.talentPoints[talent.id] = (this.player.talentPoints[talent.id] || 0) + 1;
+            // Refresh stats immediately so HP talents take effect
+            const newStats = this.player.getComputedStats();
+            this.player.stats = newStats;
+            // If max HP increased, heal the difference
+            if (newStats.maxHealth > this.player.health) {
+              this.player.health = Math.min(newStats.maxHealth, this.player.health + (newStats.maxHealth - (this.player.stats.maxHealth || 100)));
+            }
+            this.events.emit('statsChanged', newStats);
             this._closeTalentTree();
             this._showTalentTree();
           });
