@@ -81,20 +81,20 @@ export class GameScene extends Phaser.Scene {
     // ---- Zone + depth header ----
     this.zoneLabel = this.add.text(COMBAT_CX, 16, this.zoneData.name, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '20px',
       color: this.zoneData.color || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
 
     this.depthLabel = this.add.text(COMBAT_CX, 40, `Depth: ${this.currentDepth}`, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '20px',
       color: '#aaaacc',
     }).setOrigin(0.5).setDepth(2);
 
     this.killCountLabel = this.add.text(COMBAT_CX, 58, 'Kills: 0', {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '18px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2);
 
@@ -120,7 +120,7 @@ export class GameScene extends Phaser.Scene {
     // Ember Storm indicator (hidden initially)
     this.stormOverlay = this.add.graphics().setDepth(1).setAlpha(0);
     this.stormLabel = this.add.text(COMBAT_CX, 76, '', {
-      fontFamily: 'monospace', fontSize: '12px', color: '#ffdd44', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '16px', color: '#ffdd44', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2).setVisible(false);
 
     // ---- Player character (left side) ----
@@ -132,7 +132,7 @@ export class GameScene extends Phaser.Scene {
     // Player name label
     this.add.text(this.playerX, this.playerY - 70, 'HERO', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: '#4ade80',
     }).setOrigin(0.5).setDepth(3);
 
@@ -155,7 +155,7 @@ export class GameScene extends Phaser.Scene {
     // Enemy name label
     this.enemyNameLabel = this.add.text(this.enemyX, this.enemyY - 70, '', {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: '#ff6666',
     }).setOrigin(0.5).setDepth(3);
 
@@ -182,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     // ---- Level / XP display ----
     this.levelLabel = this.add.text(20, height - 30, `Lv.${this.player.level}`, {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '18px',
       color: '#f0c040',
     }).setDepth(2);
 
@@ -206,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     this.pauseBtnBg.strokeRoundedRect(pauseBtnX - pauseBtnW / 2, pauseBtnY - pauseBtnH / 2, pauseBtnW, pauseBtnH, 8);
 
     this.pauseBtnText = this.add.text(pauseBtnX, pauseBtnY, '⚔ MANAGE GEAR', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#e94560', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '20px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     this.pauseHitArea = this.add.rectangle(pauseBtnX, pauseBtnY, pauseBtnW, pauseBtnH)
@@ -235,11 +235,11 @@ export class GameScene extends Phaser.Scene {
     this.pauseOverlay.setDepth(50);
 
     this.pauseText = this.add.text(COMBAT_CX, height / 2 - 40, '', {
-      fontFamily: 'monospace', fontSize: '14px', color: '#e94560', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '20px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(51).setVisible(false);
 
     this.pauseSubText = this.add.text(COMBAT_CX, height / 2, '', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#aaaacc',
+      fontFamily: 'monospace', fontSize: '18px', color: '#aaaacc',
     }).setOrigin(0.5).setDepth(51).setVisible(false);
 
     // Space bar to toggle pause
@@ -259,7 +259,7 @@ export class GameScene extends Phaser.Scene {
     this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
 
     this.speedBtnText = this.add.text(speedBtnX, speedBtnY, '1x', {
-      fontFamily: 'monospace', fontSize: '13px', color: '#aaaacc', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '18px', color: '#aaaacc', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     const speedHit = this.add.rectangle(speedBtnX, speedBtnY, speedBtnW, speedBtnH)
@@ -355,7 +355,7 @@ export class GameScene extends Phaser.Scene {
 
       // Icon (large centered emoji)
       const icon = this.add.text(ax + abSize / 2, ay + abSize / 2 - 2, def.icon, {
-        fontSize: '12px',
+        fontSize: '22px',
       }).setOrigin(0.5).setDepth(9);
 
       // Hotkey badge (small letter in corner)
@@ -369,7 +369,7 @@ export class GameScene extends Phaser.Scene {
 
       // Cooldown seconds text (centered)
       const cdText = this.add.text(ax + abSize / 2, ay + abSize / 2, '', {
-        fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '22px', color: '#ffffff', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(11).setVisible(false);
       cdText.setShadow(1, 1, '#000000', 2);
 
@@ -1117,7 +1117,7 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.flash(400, 255, 150, 30);
             this._addCombatLog('A pulse from the Maw... EMBER STORM!', '#ffdd44');
             const stormText = this.add.text(COMBAT_CX, 200, 'EMBER STORM!', {
-              fontFamily: 'monospace', fontSize: '12px', color: '#ffdd44', fontStyle: 'bold',
+              fontFamily: 'monospace', fontSize: '22px', color: '#ffdd44', fontStyle: 'bold',
             }).setOrigin(0.5).setDepth(20).setAlpha(0);
             stormText.setShadow(0, 0, '#f97316', 8, true, true);
             this.tweens.add({
@@ -1144,7 +1144,7 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.flash(300, 255, 200, 50);
       // Victory text
       const bossText = this.add.text(COMBAT_CX, 200, 'BOSS DEFEATED!', {
-        fontFamily: 'monospace', fontSize: '13px', color: '#ffdd44', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '24px', color: '#ffdd44', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(20).setAlpha(0);
       bossText.setShadow(0, 0, '#f97316', 8, true, true);
       this.tweens.add({
@@ -1232,7 +1232,7 @@ export class GameScene extends Phaser.Scene {
     // Level up notification in combat area
     const lvlText = this.add.text(COMBAT_CX, 200, `LEVEL UP! Lv.${data.newLevel}`, {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '20px',
       color: '#f0c040',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(15).setAlpha(0);
@@ -1305,7 +1305,7 @@ export class GameScene extends Phaser.Scene {
 
     const logText = this.add.text(COMBAT_CX, this.combatLogY, message, {
       fontFamily: 'monospace',
-      fontSize: '12px',
+      fontSize: '16px',
       color: color || '#aaaacc',
     }).setOrigin(0.5).setDepth(2).setAlpha(0);
 
@@ -1357,7 +1357,7 @@ export class GameScene extends Phaser.Scene {
 
     const text = this.add.text(btnX, btnY, 'Retreat', {
       fontFamily: 'monospace',
-      fontSize: '13px',
+      fontSize: '18px',
       color: '#ff8888',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(9);
@@ -1465,7 +1465,7 @@ export class GameScene extends Phaser.Scene {
     container.add(bg);
 
     container.add(this.add.text(ttX + 8, ttY + 6, `${def.icon} ${def.name}`, {
-      fontFamily: 'monospace', fontSize: '13px', color: def.textColor, fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '18px', color: def.textColor, fontStyle: 'bold',
     }));
 
     container.add(this.add.text(ttX + 8, ttY + 24, def.desc, {
