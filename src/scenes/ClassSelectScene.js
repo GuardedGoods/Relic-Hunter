@@ -84,24 +84,10 @@ export class ClassSelectScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5, 0).setDepth(5);
 
-    // ---- Resource info ----
-    const res = cls.resource;
-    this.add.text(leftCenterX, cardY + 185, `Resource: ${res.name} (max ${res.max})`, {
-      fontFamily: 'monospace',
-      fontSize: '13px',
-      color: res.color,
-    }).setOrigin(0.5).setDepth(5);
-
-    this.add.text(leftCenterX, cardY + 205, `Decays ${res.decay}/sec after ${res.decayDelay / 1000}s`, {
-      fontFamily: 'monospace',
-      fontSize: '11px',
-      color: '#888899',
-    }).setOrigin(0.5).setDepth(5);
-
     // ---- Stat bonuses ----
     const bonuses = cls.baseStatBonuses;
     const bonusStr = Object.entries(bonuses).map(([k, v]) => `+${v} ${k}`).join('  ');
-    this.add.text(leftCenterX, cardY + 230, bonusStr, {
+    this.add.text(leftCenterX, cardY + 185, bonusStr, {
       fontFamily: 'monospace',
       fontSize: '13px',
       color: '#4ade80',
