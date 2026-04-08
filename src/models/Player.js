@@ -22,8 +22,7 @@ export class Player {
       [SLOT.CHEST]: null,
       [SLOT.GLOVES]: null,
       [SLOT.BOOTS]: null,
-      ring1: null,
-      ring2: null,
+      ring: null,
     };
     this.inventory = [];
     this.gold = 0;
@@ -45,19 +44,19 @@ export class Player {
     this._applyUpgradeBonuses();
 
     this.equipment = {
-      [SLOT.WEAPON]: data.equipment[SLOT.WEAPON] || null,
-      [SLOT.HELMET]: data.equipment[SLOT.HELMET] || null,
-      [SLOT.CHEST]: data.equipment[SLOT.CHEST] || null,
-      [SLOT.GLOVES]: data.equipment[SLOT.GLOVES] || null,
-      [SLOT.BOOTS]: data.equipment[SLOT.BOOTS] || null,
-      ring1: data.equipment.ring1 || null,
-      ring2: data.equipment.ring2 || null,
+      [SLOT.WEAPON]: null,
+      [SLOT.HELMET]: null,
+      [SLOT.CHEST]: null,
+      [SLOT.GLOVES]: null,
+      [SLOT.BOOTS]: null,
+      ring: null,
     };
-    this.inventory = data.inventory || [];
+    // Runs start fresh — no gear or inventory carries over
+    this.inventory = [];
     this.gold = data.gold || 0;
     this.maxDepthReached = data.maxDepthReached || 0;
     this.totalRuns = data.totalRuns || 0;
-    this.currentHealth = data.currentHealth ?? this.baseStats.maxHealth;
+    this.currentHealth = this.baseStats.maxHealth;
   }
 
   /** Apply all upgrade bonuses to baseStats. */
@@ -195,17 +194,9 @@ export class Player {
     if (!item || !item.slot) return null;
 
     if (item.slot === SLOT.RING) {
-      if (this.equipment.ring1 === null) {
-        this.equipment.ring1 = item;
-        return null;
-      } else if (this.equipment.ring2 === null) {
-        this.equipment.ring2 = item;
-        return null;
-      } else {
-        const old = this.equipment.ring1;
-        this.equipment.ring1 = item;
-        return old;
-      }
+      const old = this.equipment.ring;
+      this.equipment.ring = item;
+      return old;
     }
 
     const old = this.equipment[item.slot];
