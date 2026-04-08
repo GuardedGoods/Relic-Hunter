@@ -1,26 +1,28 @@
-# ============================================================
-# Relic Hunter - Docker Compose
-# Deploy on Synology NAS, access via *.dukestack.com
-#
-# Usage:
-#   docker compose up -d --build    # Build and start
-#   docker compose down             # Stop and remove
-#   docker compose up -d --build --force-recreate  # Rebuild after changes
-# ============================================================
+version: '3.8'
 
 services:
   relic-hunter:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/guardedgoods/relic-hunter:latest
     container_name: relic-hunter
     ports:
-      # Host port 8049 -> container port 80
-      # Configure your Synology reverse proxy to route
-      # relic-hunter.dukestack.com -> localhost:8080
       - "8049:80"
     restart: unless-stopped
-    labels:
-      - "com.dukestack.app=relic-hunter"
-      - "com.dukestack.description=Relic Hunter - Loot-Focused Micro RPG"
-      - "com.dukestack.domain=relic-hunter.dukestack.com"
+
+# ═══════════════════════════════════════════════════════════════════
+# SYNOLOGY NAS DEPLOYMENT
+# ═══════════════════════════════════════════════════════════════════
+#
+# 1. Open Synology Container Manager
+# 2. Go to Project → Create
+# 3. Name it "relic-hunter"
+# 4. Paste this entire file as the docker-compose content
+# 5. Click "Build & Start"
+# 6. Play at http://dukestack.com:8049
+#
+# The image is automatically built and published to GitHub Container
+# Registry whenever code is pushed to the main branch.
+#
+# To update to the latest version:
+#   Container Manager → Project → relic-hunter → Action → Build
+#   Or SSH: docker-compose pull && docker-compose up -d
+# ═══════════════════════════════════════════════════════════════════
