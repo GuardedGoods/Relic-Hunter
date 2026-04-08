@@ -641,11 +641,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Column headers
     const headerY = py + 50;
-    const cols = [px + 10, px + 35, px + 160, px + 245, px + 305, px + 375, px + 455, px + 540];
-    const headers = ['#', 'Player', 'Cls', 'Lv', 'Dpth', 'Kills', 'Hit', 'Killed By'];
+    const cols = [px + 10, px + 30, px + 130, px + 190, px + 220, px + 265, px + 310, px + 375, px + 450];
+    const headers = ['#', 'Player', 'Cls', 'Lv', 'Dpth', 'Kills', 'Hit', 'Killed By', 'Date'];
     headers.forEach((hdr, i) => {
       container.add(this.add.text(cols[i], headerY, hdr, {
-        fontFamily: 'monospace', fontSize: '13px', color: '#888899', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '10px', color: '#888899', fontStyle: 'bold',
       }));
     });
 
@@ -676,11 +676,11 @@ export class MainMenuScene extends Phaser.Scene {
         const rowColor = isMe ? '#f0c040' : '#ccccdd';
         const rankColor = i < 3 ? '#f97316' : rowColor;
 
-        const fs = '11px';
+        const fs = '9px';
         container.add(this.add.text(cols[0], ey, `${entry.rank}`, {
           fontFamily: 'monospace', fontSize: fs, color: rankColor, fontStyle: i < 3 ? 'bold' : 'normal',
         }));
-        container.add(this.add.text(cols[1], ey, entry.username, {
+        container.add(this.add.text(cols[1], ey, entry.username.length > 12 ? entry.username.substring(0, 11) + '.' : entry.username, {
           fontFamily: 'monospace', fontSize: fs, color: rowColor,
         }));
         const className = (entry.class || 'slayer').charAt(0).toUpperCase() + (entry.class || 'slayer').slice(1);
@@ -701,6 +701,9 @@ export class MainMenuScene extends Phaser.Scene {
         }));
         container.add(this.add.text(cols[7], ey, entry.killed_by || '--', {
           fontFamily: 'monospace', fontSize: fs, color: entry.killed_by ? '#e94560' : '#555566',
+        }));
+        container.add(this.add.text(cols[8], ey, entry.date || '', {
+          fontFamily: 'monospace', fontSize: fs, color: '#666677',
         }));
       });
     }

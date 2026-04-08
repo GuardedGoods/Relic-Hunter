@@ -62,6 +62,8 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.on('pauseToggled', this._onPauseToggled, this);
       gameScene.events.on('talentTreeToggled', (isOpen) => {
         this.scene.setVisible(!isOpen);
+        // Refresh stats when returning from talent tree
+        if (!isOpen) this._refreshAll();
       });
     }
 
@@ -162,6 +164,11 @@ export class UIScene extends Phaser.Scene {
   _updateStatsDisplay() {
     const stats = this.player.getComputedStats();
     this.player.stats = stats;
+
+    // Update level in stats header
+    if (this.statsHeader) {
+      this.statsHeader.setText(`STATS  Lv.${this.player.level || 1}`);
+    }
 
     for (const [key, entry] of Object.entries(this.statTexts)) {
       const val = stats[key] || 0;
@@ -313,7 +320,7 @@ export class UIScene extends Phaser.Scene {
 
     // "Only Upgrades" toggle button
     if (typeof this.player.filterUpgradesOnly === 'undefined') {
-      this.player.filterUpgradesOnly = false;
+      this.player.filterUpgradesOnly = true;
     }
     const upgToggleX = trashStartX + 5 * (trashBtnW + 2) + 6;
     const upgToggleY = filterLabelY - 1;

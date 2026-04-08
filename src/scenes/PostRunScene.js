@@ -3,7 +3,7 @@ import { RARITY_COLORS, RARITY_ORDER, UPGRADE_TYPES } from '../data/constants.js
 import { Player } from '../models/Player.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { getAllUpgrades, applyUpgrade } from '../systems/ProgressionSystem.js';
-import { isLoggedIn, submitScore } from '../systems/ApiClient.js';
+import { isLoggedIn, getUsername, submitScore, getLeaderboard } from '../systems/ApiClient.js';
 
 export class PostRunScene extends Phaser.Scene {
   constructor() {
@@ -192,11 +192,7 @@ export class PostRunScene extends Phaser.Scene {
 
     // Leaderboard button
     this._createButton(width / 2, btnY + 60, 200, 48, 'Leaderboard', 0x16213e, () => {
-      this.cameras.main.fadeOut(300, 0x1a, 0x1a, 0x2e);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('MainMenuScene');
-        // Leaderboard will be accessible from main menu
-      });
+      this._showLeaderboard();
     });
 
     // ---- Auto-save ----
@@ -467,5 +463,77 @@ export class PostRunScene extends Phaser.Scene {
       this.upgradePanel.destroy();
       this.upgradePanel = null;
     }
+  }
+
+  async _showLeaderboard() {
+    if (this.lbPanel) return;
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const container = this.add.container(0, 0).setDepth(50);
+    this.lbPanel = container;
+
+    const backdrop = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.7).setInteractive();
+    container.add(backdrop);
+    backdrop.on('pointerdown', () => { container.destroy(); this.lbPanel = null; });
+
+    const pw = 700, ph = 480;
+    const px = w / 2 - pw / 2, py = h / 2 - ph / 2;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1e, 0.98);
+    bg.fillRoundedRect(px, py, pw, ph, 10);
+    bg.lineStyle(2, 0xf97316, 0.8);
+    bg.strokeRoundedRect(px, py, pw, ph, 10);
+    container.add(bg);
+
+    container.add(this.add.text(w / 2, py + 20, 'LEADERBOARD', {
+      fontFamily: 'monospace', fontSize: '16px', color: '#f97316', fontStyle: 'bold',
+    }).setOrigin(0.5));
+
+    const headerY = py + 45;
+    const cols = [px + 10, px + 30, px + 130, px + 190, px + 220, px + 265, px + 310, px + 375, px + 450];
+    const headers = ['#', 'Player', 'Cls', 'Lv', 'Dpth', 'Kills', 'Hit', 'Killed By', 'Date'];
+    headers.forEach((hdr, i) => {
+      container.add(this.add.text(cols[i], headerY, hdr, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#888899', fontStyle: 'bold',
+      }));
+    });
+
+    const loading = this.add.text(w / 2, py + ph / 2, 'Loading...', {
+      fontFamily: 'monospace', fontSize: '14px', color: '#aaaacc',
+    }).setOrigin(0.5);
+    container.add(loading);
+
+    const entries = await getLeaderboard();
+    loading.destroy();
+
+    if (entries.length === 0) {
+      container.add(this.add.text(w / 2, py + ph / 2, 'No scores yet!', {
+        fontFamily: 'monospace', fontSize: '11px', color: '#888899',
+      }).setOrigin(0.5));
+    } else {
+      entries.slice(0, 20).forEach((entry, i) => {
+        const ey = headerY + 22 + i * 16;
+        const isMe = isLoggedIn() && entry.username === getUsername();
+        const rowColor = isMe ? '#f0c040' : '#ccccdd';
+        const fs = '9px';
+        container.add(this.add.text(cols[0], ey, `${entry.rank}`, { fontFamily: 'monospace', fontSize: fs, color: i < 3 ? '#f97316' : rowColor }));
+        container.add(this.add.text(cols[1], ey, entry.username, { fontFamily: 'monospace', fontSize: fs, color: rowColor }));
+        container.add(this.add.text(cols[2], ey, entry.class || 'slayer', { fontFamily: 'monospace', fontSize: fs, color: '#c084fc' }));
+        container.add(this.add.text(cols[3], ey, `${entry.level || 1}`, { fontFamily: 'monospace', fontSize: fs, color: '#f0c040' }));
+        container.add(this.add.text(cols[4], ey, `${entry.depth}`, { fontFamily: 'monospace', fontSize: fs, color: rowColor }));
+        container.add(this.add.text(cols[5], ey, `${entry.kills}`, { fontFamily: 'monospace', fontSize: fs, color: rowColor }));
+        container.add(this.add.text(cols[6], ey, `${entry.highest_damage || 0}`, { fontFamily: 'monospace', fontSize: fs, color: '#f97316' }));
+        container.add(this.add.text(cols[7], ey, entry.killed_by || '--', { fontFamily: 'monospace', fontSize: fs, color: entry.killed_by ? '#e94560' : '#555566' }));
+        container.add(this.add.text(cols[8], ey, entry.date || '', { fontFamily: 'monospace', fontSize: fs, color: '#666677' }));
+      });
+    }
+
+    const closeBtn = this.add.text(w / 2, py + ph - 20, 'Close', {
+      fontFamily: 'monospace', fontSize: '12px', color: '#ffffff', fontStyle: 'bold',
+      backgroundColor: '#333355', padding: { x: 20, y: 8 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    container.add(closeBtn);
+    closeBtn.on('pointerdown', () => { container.destroy(); this.lbPanel = null; });
   }
 }

@@ -184,7 +184,7 @@ export class GameScene extends Phaser.Scene {
       fontFamily: 'monospace',
       fontSize: '18px',
       color: '#f0c040',
-    }).setDepth(2);
+    }).setDepth(15);
 
     // ---- Combat log area ----
     this.combatLogTexts = [];
