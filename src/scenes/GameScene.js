@@ -43,11 +43,12 @@ export class GameScene extends Phaser.Scene {
       goldEarned: 0,
       itemsFound: [],
       bestItem: null,
-      startDepth: this.player.maxDepthReached,
+      startDepth: 0,
       died: false,
     };
 
-    this.currentDepth = this.player.maxDepthReached;
+    // Each run starts at depth 0 (maxDepthReached is only for zone unlocks)
+    this.currentDepth = 0;
 
     // ---- Combat system ----
     this.combatSystem = new CombatSystem();
@@ -240,48 +241,93 @@ export class GameScene extends Phaser.Scene {
       this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
     });
 
-    // ---- Shard Powers (ability bar) ----
+    // ---- Shard Powers Hotbar (WoW-style) ----
     this.abilityButtons = {};
+    this.abilityTooltip = null;
     const abilityDefs = [
-      { key: 'shardBurst', label: 'Q: Shard Burst', hotkey: 'Q', color: 0xf97316, textColor: '#f97316' },
-      { key: 'threshWard', label: "W: Thresh's Ward", hotkey: 'W', color: 0x4ade80, textColor: '#4ade80' },
-      { key: 'emberHeal', label: 'E: Ember Heal', hotkey: 'E', color: 0x60a5fa, textColor: '#60a5fa' },
+      { key: 'shardBurst', icon: '🔥', hotkey: 'Q', color: 0xf97316, borderColor: 0xcc5500, textColor: '#f97316',
+        name: 'Shard Burst', desc: 'Deal 200% ATK damage\nto the current enemy.', cd: '8s' },
+      { key: 'threshWard', icon: '🛡', hotkey: 'W', color: 0x4ade80, borderColor: 0x228844, textColor: '#4ade80',
+        name: "Thresh's Ward", desc: 'Block the next 3\nenemy attacks.', cd: '15s' },
+      { key: 'emberHeal', icon: '💎', hotkey: 'E', color: 0x60a5fa, borderColor: 0x3366aa, textColor: '#60a5fa',
+        name: 'Ember Heal', desc: 'Restore 35% of\nyour max HP.', cd: '12s' },
     ];
 
-    const abBarY = height - 70;
-    const abBtnW = 140;
-    const abBtnH = 28;
-    const abStartX = 30;
-    const abGap = 8;
+    const abSize = 52;
+    const abGap = 6;
+    const abTotalW = abilityDefs.length * abSize + (abilityDefs.length - 1) * abGap;
+    const abStartX = 250 - abTotalW / 2; // centered in combat area
+    const abBarY = 440;
+
+    // Hotbar background strip
+    const hotbarBg = this.add.graphics().setDepth(7);
+    hotbarBg.fillStyle(0x0a0a18, 0.85);
+    hotbarBg.fillRoundedRect(abStartX - 8, abBarY - 6, abTotalW + 16, abSize + 28, 6);
+    hotbarBg.lineStyle(1, 0x333355, 0.8);
+    hotbarBg.strokeRoundedRect(abStartX - 8, abBarY - 6, abTotalW + 16, abSize + 28, 6);
 
     abilityDefs.forEach((def, i) => {
-      const ax = abStartX + i * (abBtnW + abGap);
+      const ax = abStartX + i * (abSize + abGap);
+      const ay = abBarY;
 
+      // Slot background (dark inset square)
       const bg = this.add.graphics().setDepth(8);
-      bg.fillStyle(0x16213e, 1);
-      bg.fillRoundedRect(ax, abBarY, abBtnW, abBtnH, 5);
-      bg.lineStyle(1, def.color, 0.8);
-      bg.strokeRoundedRect(ax, abBarY, abBtnW, abBtnH, 5);
+      bg.fillStyle(0x111128, 1);
+      bg.fillRoundedRect(ax, ay, abSize, abSize, 4);
+      bg.lineStyle(2, def.borderColor, 1);
+      bg.strokeRoundedRect(ax, ay, abSize, abSize, 4);
 
-      const label = this.add.text(ax + abBtnW / 2, abBarY + abBtnH / 2, def.label, {
-        fontFamily: 'monospace', fontSize: '10px', color: def.textColor, fontStyle: 'bold',
+      // Icon (large centered emoji)
+      const icon = this.add.text(ax + abSize / 2, ay + abSize / 2 - 2, def.icon, {
+        fontSize: '22px',
       }).setOrigin(0.5).setDepth(9);
 
-      // Cooldown overlay (fills from left, semi-transparent dark)
-      const cdOverlay = this.add.graphics().setDepth(9).setAlpha(0.6);
+      // Hotkey badge (small letter in corner)
+      const hotkeyBadge = this.add.text(ax + 4, ay + 2, def.hotkey, {
+        fontFamily: 'monospace', fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
+        backgroundColor: '#00000088', padding: { x: 2, y: 0 },
+      }).setDepth(10);
 
-      // Cooldown text
-      const cdText = this.add.text(ax + abBtnW / 2, abBarY + abBtnH / 2, '', {
-        fontFamily: 'monospace', fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(10).setVisible(false);
+      // Cooldown sweep overlay
+      const cdOverlay = this.add.graphics().setDepth(10).setAlpha(0.7);
 
-      const hitArea = this.add.rectangle(ax + abBtnW / 2, abBarY + abBtnH / 2, abBtnW, abBtnH)
+      // Cooldown seconds text (centered)
+      const cdText = this.add.text(ax + abSize / 2, ay + abSize / 2, '', {
+        fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(11).setVisible(false);
+      cdText.setShadow(1, 1, '#000000', 2);
+
+      // Ability name label below the icon
+      const nameLabel = this.add.text(ax + abSize / 2, ay + abSize + 2, def.hotkey, {
+        fontFamily: 'monospace', fontSize: '9px', color: '#888899',
+      }).setOrigin(0.5).setDepth(9);
+
+      // Hit area for click + hover
+      const hitArea = this.add.rectangle(ax + abSize / 2, ay + abSize / 2, abSize, abSize)
         .setInteractive({ useHandCursor: true })
-        .setAlpha(0.001).setDepth(11);
+        .setAlpha(0.001).setDepth(12);
 
       hitArea.on('pointerdown', () => this._useAbility(def.key));
 
-      this.abilityButtons[def.key] = { bg, label, cdOverlay, cdText, x: ax, y: abBarY, w: abBtnW, h: abBtnH, color: def.color };
+      hitArea.on('pointerover', () => {
+        bg.clear();
+        bg.fillStyle(0x1a1a3a, 1);
+        bg.fillRoundedRect(ax, ay, abSize, abSize, 4);
+        bg.lineStyle(2, 0xffffff, 1);
+        bg.strokeRoundedRect(ax, ay, abSize, abSize, 4);
+        this._showAbilityTooltip(ax + abSize / 2, ay - 8, def);
+      });
+
+      hitArea.on('pointerout', () => {
+        bg.clear();
+        bg.fillStyle(0x111128, 1);
+        bg.fillRoundedRect(ax, ay, abSize, abSize, 4);
+        bg.lineStyle(2, def.borderColor, 1);
+        bg.strokeRoundedRect(ax, ay, abSize, abSize, 4);
+        this._hideAbilityTooltip();
+      });
+
+      this.abilityButtons[def.key] = { bg, icon, cdOverlay, cdText, nameLabel, x: ax, y: ay, w: abSize, h: abSize, color: def.color, borderColor: def.borderColor, def };
 
       // Keyboard hotkey
       this.input.keyboard.on(`keydown-${def.hotkey}`, () => this._useAbility(def.key));
@@ -929,26 +975,67 @@ export class GameScene extends Phaser.Scene {
       const cdRatio = ab.currentCooldown / ab.cooldown;
       btn.cdOverlay.clear();
       if (cdRatio > 0) {
+        // Dark sweep overlay covering the icon proportionally
         btn.cdOverlay.fillStyle(0x000000, 1);
-        btn.cdOverlay.fillRoundedRect(btn.x, btn.y, btn.w * cdRatio, btn.h, 5);
-        btn.cdText.setText(Math.ceil(ab.currentCooldown / 1000) + 's').setVisible(true);
-        btn.label.setAlpha(0.4);
+        btn.cdOverlay.fillRoundedRect(btn.x, btn.y, btn.w, btn.h * cdRatio, 4);
+        btn.cdText.setText(Math.ceil(ab.currentCooldown / 1000)).setVisible(true);
+        btn.icon.setAlpha(0.3);
       } else {
         btn.cdText.setVisible(false);
-        btn.label.setAlpha(1);
+        btn.icon.setAlpha(1);
       }
     }
 
-    // Show ward charges indicator
+    // Show ward charges indicator below the icon
     const ward = this.combatSystem.abilities.threshWard;
-    if (ward && ward.charges > 0) {
-      const btn = this.abilityButtons.threshWard;
-      if (btn) {
-        btn.label.setText(`W: Ward [${ward.charges}]`);
+    const wardBtn = this.abilityButtons.threshWard;
+    if (wardBtn) {
+      if (ward && ward.charges > 0) {
+        wardBtn.nameLabel.setText(`${ward.charges}`).setColor('#4ade80');
+      } else {
+        wardBtn.nameLabel.setText('W').setColor('#888899');
       }
-    } else {
-      const btn = this.abilityButtons.threshWard;
-      if (btn) btn.label.setText("W: Thresh's Ward");
+    }
+  }
+
+  _showAbilityTooltip(x, y, def) {
+    this._hideAbilityTooltip();
+    const container = this.add.container(0, 0).setDepth(60);
+    this.abilityTooltip = container;
+
+    const ttW = 170;
+    const ttH = 90;
+    const ttX = Math.max(10, Math.min(x - ttW / 2, 490 - ttW));
+    const ttY = y - ttH - 4;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1e, 0.95);
+    bg.fillRoundedRect(ttX, ttY, ttW, ttH, 6);
+    bg.lineStyle(1, def.borderColor, 1);
+    bg.strokeRoundedRect(ttX, ttY, ttW, ttH, 6);
+    container.add(bg);
+
+    container.add(this.add.text(ttX + 8, ttY + 6, `${def.icon} ${def.name}`, {
+      fontFamily: 'monospace', fontSize: '12px', color: def.textColor, fontStyle: 'bold',
+    }));
+
+    container.add(this.add.text(ttX + 8, ttY + 24, def.desc, {
+      fontFamily: 'monospace', fontSize: '10px', color: '#ccccdd', lineSpacing: 2,
+    }));
+
+    container.add(this.add.text(ttX + ttW - 8, ttY + ttH - 14, `CD: ${def.cd}`, {
+      fontFamily: 'monospace', fontSize: '9px', color: '#888899',
+    }).setOrigin(1, 0));
+
+    container.add(this.add.text(ttX + 8, ttY + ttH - 14, `[${def.hotkey}]`, {
+      fontFamily: 'monospace', fontSize: '9px', color: '#f0c040', fontStyle: 'bold',
+    }));
+  }
+
+  _hideAbilityTooltip() {
+    if (this.abilityTooltip) {
+      this.abilityTooltip.destroy();
+      this.abilityTooltip = null;
     }
   }
 
