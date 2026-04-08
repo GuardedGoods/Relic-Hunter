@@ -4,10 +4,6 @@ import { Player } from '../models/Player.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { getAllUpgrades, applyUpgrade } from '../systems/ProgressionSystem.js';
 
-/**
- * PostRunScene - Displayed after a run ends (death or retreat).
- * Shows run summary, lets player buy upgrades, then return to menu.
- */
 export class PostRunScene extends Phaser.Scene {
   constructor() {
     super('PostRunScene');
@@ -15,183 +11,217 @@ export class PostRunScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
     this.cameras.main.fadeIn(400, 0x1a, 0x1a, 0x2e);
 
-    // Background gradient
+    // Retrieve run stats from registry
+    const runData = this.registry.get('runStats') || {};
+    const died = runData.died || false;
+    const depthReached = runData.depthReached || 0;
+    const enemiesKilled = runData.enemiesKilled || 0;
+    const goldEarned = runData.goldEarned || 0;
+    const itemsFound = runData.itemsFound || [];
+    const bestItem = runData.bestItem || null;
+    const playerSaveData = runData.player || null;
+
+    // Reconstruct player for saving and upgrades
+    this.player = playerSaveData ? Player.fromSaveData(playerSaveData) : new Player();
+
+    // ---- Background gradient ----
     const bg = this.add.graphics();
     for (let y = 0; y < height; y++) {
       const t = y / height;
-      const r = Phaser.Math.Linear(0x1a, 0x0a, t);
-      const g = Phaser.Math.Linear(0x1a, 0x0a, t);
-      const b = Phaser.Math.Linear(0x2e, 0x1e, t);
+      const r = Phaser.Math.Linear(0x1a, 0x0f, t);
+      const g = Phaser.Math.Linear(0x1a, 0x10, t);
+      const b = Phaser.Math.Linear(0x2e, 0x20, t);
       bg.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1);
       bg.fillRect(0, y, width, 1);
     }
+    bg.setDepth(0);
 
-    // Floating particles
+    // ---- Floating particles ----
     this.particles = [];
     for (let i = 0; i < 20; i++) {
-      const dot = this.add.graphics();
+      const px = Phaser.Math.Between(0, width);
+      const py = Phaser.Math.Between(0, height);
+      const gfx = this.add.graphics();
       const size = Phaser.Math.FloatBetween(1, 2.5);
-      dot.fillStyle(0x4444aa, Phaser.Math.FloatBetween(0.1, 0.3));
-      dot.fillCircle(0, 0, size);
-      const dx = Phaser.Math.Between(0, width);
-      const dy = Phaser.Math.Between(0, height);
-      dot.setPosition(dx, dy).setDepth(0);
-      this.particles.push({ g: dot, speed: Phaser.Math.FloatBetween(0.15, 0.4), x: dx, y: dy });
+      gfx.fillStyle(0x4444aa, Phaser.Math.FloatBetween(0.1, 0.3));
+      gfx.fillCircle(0, 0, size);
+      gfx.setPosition(px, py).setDepth(1);
+      this.particles.push({
+        graphic: gfx,
+        speed: Phaser.Math.FloatBetween(0.15, 0.4),
+        x: px, y: py, maxY: height, maxX: width,
+      });
     }
-
-    // ---- Get run stats from registry ----
-    const runStats = this.registry.get('runStats') || {};
-    const died = runStats.died || false;
-    const depthReached = runStats.depthReached || 0;
-    const enemiesKilled = runStats.enemiesKilled || 0;
-    const goldEarned = runStats.goldEarned || 0;
-    const itemsFound = runStats.itemsFound || [];
-    const bestItem = runStats.bestItem || null;
-
-    // Load player from save
-    let player;
-    if (runStats.player) {
-      player = Player.fromSaveData(runStats.player);
-    } else {
-      player = new Player();
-    }
-    this.player = player;
-
-    // Save immediately
-    try { saveGame(player); } catch (_) { /* ignore */ }
 
     // ---- Header ----
     const headerText = died ? 'YOU DIED' : 'RUN COMPLETE';
     const headerColor = died ? '#e94560' : '#4ade80';
 
     const header = this.add.text(width / 2, 50, headerText, {
-      fontFamily: 'monospace', fontSize: '40px', color: headerColor, fontStyle: 'bold',
+      fontFamily: 'monospace',
+      fontSize: '42px',
+      color: headerColor,
+      fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
     header.setShadow(0, 0, headerColor, 10, true, true);
 
-    // Subtle pulse
+    // Pulse
     this.tweens.add({
       targets: header,
-      alpha: { from: 1, to: 0.7 },
+      alpha: { from: 0.7, to: 1 },
       duration: 1200,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
 
-    // ---- Stats panel ----
-    const panelW = 400;
-    const panelH = 290;
+    // ---- Summary panel ----
+    const panelW = 500;
+    const panelH = 340;
     const panelX = (width - panelW) / 2;
     const panelY = 100;
 
-    const panelBg = this.add.graphics().setDepth(1);
-    panelBg.fillStyle(0x16213e, 0.9);
+    const panelBg = this.add.graphics().setDepth(3);
+    panelBg.fillStyle(0x16213e, 0.95);
     panelBg.fillRoundedRect(panelX, panelY, panelW, panelH, 10);
-    panelBg.lineStyle(2, 0x333355, 0.8);
+    panelBg.lineStyle(2, 0x333355, 1);
     panelBg.strokeRoundedRect(panelX, panelY, panelW, panelH, 10);
 
-    const statLineH = 30;
-    let lineY = panelY + 20;
+    let sy = panelY + 20;
+    const leftX = panelX + 30;
+    const valueX = panelX + panelW - 30;
 
     // Depth reached
-    this._addStatLine(panelX + 25, lineY, 'Depth Reached', `${depthReached}`, '#60a5fa');
-    lineY += statLineH;
+    this._addStatRow(leftX, valueX, sy, 'Depth Reached', `${depthReached}`, '#ffffff');
+    sy += 36;
 
     // Enemies killed
-    this._addStatLine(panelX + 25, lineY, 'Enemies Killed', `${enemiesKilled}`, '#4ade80');
-    lineY += statLineH;
+    this._addStatRow(leftX, valueX, sy, 'Enemies Killed', `${enemiesKilled}`, '#ffffff');
+    sy += 36;
 
     // Gold earned
-    this._addStatLine(panelX + 25, lineY, 'Gold Earned', `${goldEarned}`, '#f0c040');
-    lineY += statLineH;
+    this._addStatRow(leftX, valueX, sy, 'Gold Earned', `${goldEarned}`, '#f0c040');
+    sy += 36;
 
     // Total gold
-    this._addStatLine(panelX + 25, lineY, 'Total Gold', `${player.gold}`, '#f0c040');
-    lineY += statLineH;
+    this._addStatRow(leftX, valueX, sy, 'Total Gold', `${this.player.gold}`, '#f0c040');
+    sy += 36;
 
     // Items found by rarity
     const rarityCounts = {};
     for (const item of itemsFound) {
       rarityCounts[item.rarity] = (rarityCounts[item.rarity] || 0) + 1;
     }
-    const itemsStr = RARITY_ORDER
-      .filter(r => rarityCounts[r])
-      .map(r => `${rarityCounts[r]} ${r}`)
-      .join(', ') || 'None';
-    this._addStatLine(panelX + 25, lineY, 'Items Found', itemsStr, '#aaaacc');
-    lineY += statLineH;
+    this._addStatRow(leftX, valueX, sy, 'Items Found', `${itemsFound.length}`, '#aaaacc');
+    sy += 28;
 
-    // Best item
-    if (bestItem) {
-      lineY += 10;
-      this.add.text(panelX + 25, lineY, 'Best Find:', {
-        fontFamily: 'monospace', fontSize: '12px', color: '#888899',
-      }).setDepth(2);
-
-      this.add.text(panelX + panelW - 25, lineY, bestItem.name, {
-        fontFamily: 'monospace', fontSize: '13px',
-        color: RARITY_COLORS[bestItem.rarity] || '#ffffff',
-        fontStyle: 'bold',
-      }).setOrigin(1, 0).setDepth(2);
-
-      lineY += 20;
-      if (bestItem.affixes) {
-        bestItem.affixes.forEach(affix => {
-          const affixLabel = affix.label.replace('{v}', String(affix.value));
-          this.add.text(panelX + 40, lineY, affixLabel, {
-            fontFamily: 'monospace', fontSize: '10px', color: '#ccccdd',
-          }).setDepth(2);
-          lineY += 14;
-        });
+    // Rarity breakdown
+    const breakdownParts = [];
+    for (const r of RARITY_ORDER) {
+      if (rarityCounts[r]) {
+        breakdownParts.push({ rarity: r, count: rarityCounts[r] });
       }
     }
 
-    // ---- Buttons ----
-    const btnY = 440;
+    if (breakdownParts.length > 0) {
+      const breakdownX = leftX + 20;
+      for (const part of breakdownParts) {
+        const rarityColor = RARITY_COLORS[part.rarity] || '#ffffff';
+        this.add.text(breakdownX, sy, `${part.rarity}: ${part.count}`, {
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          color: rarityColor,
+        }).setDepth(5);
+        sy += 18;
+      }
+    }
+    sy += 10;
 
-    // Upgrades button
-    this._createButton(width / 2 - 120, btnY, 200, 48, 'Upgrades', 0x16213e, () => {
-      this._showUpgradePanel();
-    });
+    // Best item found
+    if (bestItem) {
+      const bestColor = RARITY_COLORS[bestItem.rarity] || '#ffffff';
+      this.add.text(leftX, sy, 'Best Item:', {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        color: '#aaaacc',
+      }).setDepth(5);
+
+      this.add.text(valueX, sy, bestItem.name, {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        color: bestColor,
+        fontStyle: 'bold',
+      }).setOrigin(1, 0).setDepth(5);
+
+      this.add.text(valueX, sy + 18, `${bestItem.rarity.toUpperCase()} ${bestItem.slot.toUpperCase()}`, {
+        fontFamily: 'monospace',
+        fontSize: '10px',
+        color: '#888899',
+      }).setOrigin(1, 0).setDepth(5);
+    }
+
+    // ---- Buttons ----
+    const btnY = panelY + panelH + 30;
 
     // New Run button
-    this._createButton(width / 2 + 120, btnY, 200, 48, 'New Run', 0xe94560, () => {
-      // Reset health for new run
-      this.player.currentHealth = this.player.getComputedStats().maxHealth;
-      try { saveGame(this.player); } catch (_) { /* ignore */ }
+    this._createButton(width / 2 - 120, btnY, 200, 48, 'New Run', 0xe94560, () => {
       this.cameras.main.fadeOut(300, 0x1a, 0x1a, 0x2e);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('MainMenuScene');
       });
     });
 
-    // ---- Upgrade panel ----
+    // Upgrades button
+    this._createButton(width / 2 + 120, btnY, 200, 48, 'Upgrades', 0x16213e, () => {
+      this._showUpgradePanel();
+    });
+
+    // ---- Auto-save ----
+    try {
+      // Heal player to full for next run
+      const stats = this.player.getComputedStats();
+      this.player.currentHealth = stats.maxHealth;
+      saveGame(this.player);
+    } catch (_) { /* ignore */ }
+
+    // Upgrade panel state
     this.upgradePanel = null;
   }
 
   update(_time, delta) {
-    // Animate particles
-    for (const p of this.particles) {
-      p.y -= p.speed * (delta / 16);
-      if (p.y < -10) {
-        p.y = 650;
-        p.x = Phaser.Math.Between(0, 960);
+    if (this.particles) {
+      for (const p of this.particles) {
+        p.y -= p.speed * (delta / 16);
+        if (p.y < -10) {
+          p.y = p.maxY + 10;
+          p.x = Phaser.Math.Between(0, p.maxX);
+        }
+        p.graphic.setPosition(p.x, p.y);
       }
-      p.g.setPosition(p.x, p.y);
     }
   }
 
-  _addStatLine(x, y, label, value, valueColor) {
-    this.add.text(x, y, label, {
-      fontFamily: 'monospace', fontSize: '14px', color: '#888899',
-    }).setDepth(2);
+  _addStatRow(leftX, rightX, y, label, value, valueColor) {
+    this.add.text(leftX, y, label, {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#aaaacc',
+    }).setDepth(5);
 
-    this.add.text(x + 350, y, value, {
-      fontFamily: 'monospace', fontSize: '14px', color: valueColor || '#ffffff',
-    }).setOrigin(1, 0).setDepth(2);
+    this.add.text(rightX, y, value, {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: valueColor || '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(1, 0).setDepth(5);
+
+    // Separator line
+    const sep = this.add.graphics().setDepth(4);
+    sep.lineStyle(1, 0x333355, 0.5);
+    sep.lineBetween(leftX, y + 26, rightX, y + 26);
   }
 
   _createButton(x, y, w, h, label, bgColor, onClick) {
@@ -202,11 +232,17 @@ export class PostRunScene extends Phaser.Scene {
     g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 10);
 
     const text = this.add.text(x, y, label, {
-      fontFamily: 'monospace', fontSize: '18px', color: '#ffffff', fontStyle: 'bold',
+      fontFamily: 'monospace',
+      fontSize: '18px',
+      color: '#ffffff',
+      fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(6);
 
     const hitArea = this.add.rectangle(x, y, w, h)
-      .setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(7);
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .setAlpha(0.001)
+      .setDepth(7);
 
     hitArea.on('pointerover', () => {
       text.setScale(1.05);
@@ -227,6 +263,7 @@ export class PostRunScene extends Phaser.Scene {
     });
 
     hitArea.on('pointerdown', onClick);
+
     return { graphics: g, text, hitArea };
   }
 
@@ -244,10 +281,12 @@ export class PostRunScene extends Phaser.Scene {
 
     // Backdrop
     const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6)
-      .setOrigin(0.5).setInteractive().setDepth(0);
+      .setOrigin(0.5)
+      .setInteractive()
+      .setDepth(0);
     container.add(overlay);
 
-    // Panel
+    // Panel background
     const panelBg = this.add.graphics().setDepth(1);
     panelBg.fillStyle(0x16213e, 1);
     panelBg.fillRoundedRect(panelX, panelY, panelW, panelH, 12);
@@ -256,18 +295,21 @@ export class PostRunScene extends Phaser.Scene {
     container.add(panelBg);
 
     // Title
-    const titleText = this.add.text(width / 2, panelY + 30, 'UPGRADES', {
-      fontFamily: 'monospace', fontSize: '28px', color: '#e94560', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(2);
-    container.add(titleText);
+    container.add(this.add.text(width / 2, panelY + 30, 'UPGRADES', {
+      fontFamily: 'monospace',
+      fontSize: '28px',
+      color: '#e94560',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(2));
 
     // Gold
-    const goldText = this.add.text(width / 2, panelY + 60, `Gold: ${this.player.gold}`, {
-      fontFamily: 'monospace', fontSize: '16px', color: '#f0c040',
-    }).setOrigin(0.5).setDepth(2);
-    container.add(goldText);
+    container.add(this.add.text(width / 2, panelY + 60, `Gold: ${this.player.gold}`, {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#f0c040',
+    }).setOrigin(0.5).setDepth(2));
 
-    // Upgrades
+    // Get upgrades
     const upgrades = getAllUpgrades(this.player);
     const rowStartY = panelY + 100;
     const rowH = 65;
@@ -275,28 +317,38 @@ export class PostRunScene extends Phaser.Scene {
     upgrades.forEach((upg, i) => {
       const ry = rowStartY + i * rowH;
 
+      // Row background
       const rowBg = this.add.graphics().setDepth(1);
       rowBg.fillStyle(0x0f3460, 0.5);
       rowBg.fillRoundedRect(panelX + 20, ry, panelW - 40, rowH - 8, 6);
       container.add(rowBg);
 
-      const labelText = this.add.text(panelX + 35, ry + 10, upg.label, {
-        fontFamily: 'monospace', fontSize: '16px', color: '#ffffff',
-      }).setDepth(2);
-      container.add(labelText);
+      // Label
+      container.add(this.add.text(panelX + 35, ry + 10, upg.label, {
+        fontFamily: 'monospace',
+        fontSize: '16px',
+        color: '#ffffff',
+      }).setDepth(2));
 
-      const levelText = this.add.text(panelX + 35, ry + 32, `Level: ${upg.currentLevel} / ${upg.maxLevel}`, {
-        fontFamily: 'monospace', fontSize: '12px', color: '#aaaacc',
-      }).setDepth(2);
-      container.add(levelText);
+      // Level
+      container.add(this.add.text(panelX + 35, ry + 32, `Level: ${upg.currentLevel} / ${upg.maxLevel}`, {
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        color: '#aaaacc',
+      }).setDepth(2));
 
+      // Bonus display
       const isPercent = upg.type === UPGRADE_TYPES.DROP_RATE || upg.type === UPGRADE_TYPES.GOLD_GAIN;
-      const bonusStr = isPercent ? `+${(upg.currentValue * 100).toFixed(0)}%` : `+${upg.currentValue}`;
-      const bonusText = this.add.text(panelX + 280, ry + 20, bonusStr, {
-        fontFamily: 'monospace', fontSize: '14px', color: '#4ade80',
-      }).setOrigin(0.5).setDepth(2);
-      container.add(bonusText);
+      const bonusStr = isPercent
+        ? `+${(upg.currentValue * 100).toFixed(0)}%`
+        : `+${upg.currentValue}`;
+      container.add(this.add.text(panelX + 280, ry + 20, bonusStr, {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        color: '#4ade80',
+      }).setOrigin(0.5).setDepth(2));
 
+      // Buy button
       const maxed = upg.currentLevel >= upg.maxLevel;
       const canAfford = upg.canAfford;
       const btnW = 120;
@@ -311,22 +363,28 @@ export class PostRunScene extends Phaser.Scene {
       container.add(btnG);
 
       const btnLabel = maxed ? 'MAXED' : `${upg.cost} g`;
-      const btnText = this.add.text(btnX + btnW / 2, btnY2 + btnH2 / 2, btnLabel, {
-        fontFamily: 'monospace', fontSize: '13px',
+      container.add(this.add.text(btnX + btnW / 2, btnY2 + btnH2 / 2, btnLabel, {
+        fontFamily: 'monospace',
+        fontSize: '13px',
         color: maxed ? '#666666' : (canAfford ? '#ffffff' : '#aa6666'),
         fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(3);
-      container.add(btnText);
+      }).setOrigin(0.5).setDepth(3));
 
       if (!maxed) {
         const btnHit = this.add.rectangle(btnX + btnW / 2, btnY2 + btnH2 / 2, btnW, btnH2)
-          .setOrigin(0.5).setInteractive({ useHandCursor: canAfford }).setAlpha(0.001).setDepth(4);
+          .setOrigin(0.5)
+          .setInteractive({ useHandCursor: canAfford })
+          .setAlpha(0.001)
+          .setDepth(4);
         container.add(btnHit);
 
         btnHit.on('pointerdown', () => {
           const applied = applyUpgrade(this.player, upg.type);
           if (applied) {
-            try { saveGame(this.player); } catch (_) { /* ignore */ }
+            try {
+              saveGame(this.player);
+            } catch (_) { /* ignore */ }
+
             this._destroyUpgradePanel();
             this._showUpgradePanel();
           }
@@ -345,16 +403,23 @@ export class PostRunScene extends Phaser.Scene {
     closeBtnG.fillRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
     container.add(closeBtnG);
 
-    const closeText = this.add.text(width / 2, closeBtnY + closeBtnH / 2, 'Close', {
-      fontFamily: 'monospace', fontSize: '16px', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(3);
-    container.add(closeText);
+    container.add(this.add.text(width / 2, closeBtnY + closeBtnH / 2, 'Close', {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(3));
 
     const closeHit = this.add.rectangle(width / 2, closeBtnY + closeBtnH / 2, closeBtnW, closeBtnH)
-      .setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .setAlpha(0.001)
+      .setDepth(4);
     container.add(closeHit);
 
-    closeHit.on('pointerdown', () => this._destroyUpgradePanel());
+    closeHit.on('pointerdown', () => {
+      this._destroyUpgradePanel();
+    });
   }
 
   _destroyUpgradePanel() {
