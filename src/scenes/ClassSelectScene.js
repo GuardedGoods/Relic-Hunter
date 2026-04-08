@@ -78,7 +78,7 @@ export class ClassSelectScene extends Phaser.Scene {
     // Class description
     this.add.text(leftCenterX, cardY + 135, cls.description, {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '12px',
       color: '#aaaacc',
       wordWrap: { width: 280 },
       align: 'center',
@@ -88,13 +88,13 @@ export class ClassSelectScene extends Phaser.Scene {
     const res = cls.resource;
     this.add.text(leftCenterX, cardY + 185, `Resource: ${res.name} (max ${res.max})`, {
       fontFamily: 'monospace',
-      fontSize: '18px',
+      fontSize: '13px',
       color: res.color,
     }).setOrigin(0.5).setDepth(5);
 
     this.add.text(leftCenterX, cardY + 205, `Decays ${res.decay}/sec after ${res.decayDelay / 1000}s`, {
       fontFamily: 'monospace',
-      fontSize: '15px',
+      fontSize: '11px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(5);
 
@@ -103,14 +103,14 @@ export class ClassSelectScene extends Phaser.Scene {
     const bonusStr = Object.entries(bonuses).map(([k, v]) => `+${v} ${k}`).join('  ');
     this.add.text(leftCenterX, cardY + 230, bonusStr, {
       fontFamily: 'monospace',
-      fontSize: '18px',
+      fontSize: '13px',
       color: '#4ade80',
     }).setOrigin(0.5).setDepth(5);
 
     // ---- Talent trees (below class info on the left) ----
     this.add.text(leftCenterX, cardY + 270, 'TALENT TREES', {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '14px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
@@ -123,7 +123,7 @@ export class ClassSelectScene extends Phaser.Scene {
       // Tree icon + name
       this.add.text(leftX, ty, `${tree.icon} ${tree.name}`, {
         fontFamily: 'monospace',
-        fontSize: '18px',
+        fontSize: '13px',
         color: tree.color,
         fontStyle: 'bold',
       }).setDepth(5);
@@ -131,7 +131,7 @@ export class ClassSelectScene extends Phaser.Scene {
       // Tree description
       this.add.text(leftX + 10, ty + 18, tree.description, {
         fontFamily: 'monospace',
-        fontSize: '15px',
+        fontSize: '11px',
         color: '#888899',
         wordWrap: { width: 280 },
       }).setDepth(5);
@@ -142,7 +142,7 @@ export class ClassSelectScene extends Phaser.Scene {
 
     this.add.text(rightX + 200, cardY + 30, 'ABILITIES', {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '14px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
@@ -181,14 +181,14 @@ export class ClassSelectScene extends Phaser.Scene {
     // Hotkey badge
     this.add.text(x + 30, y + 50, `[${ability.hotkey}]`, {
       fontFamily: 'monospace',
-      fontSize: '15px',
+      fontSize: '11px',
       color: '#f0c040',
     }).setOrigin(0.5).setDepth(5);
 
     // Name
     this.add.text(x + 60, y + 10, ability.name, {
       fontFamily: 'monospace',
-      fontSize: '22px',
+      fontSize: '12px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setDepth(5);
@@ -196,7 +196,7 @@ export class ClassSelectScene extends Phaser.Scene {
     // Description
     this.add.text(x + 60, y + 32, ability.description, {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '12px',
       color: '#ccccdd',
       lineSpacing: 2,
     }).setDepth(5);
@@ -205,7 +205,7 @@ export class ClassSelectScene extends Phaser.Scene {
     const cdStr = `${(ability.cooldown / 1000).toFixed(0)}s CD`;
     this.add.text(x + cardW - 15, y + 12, cdStr, {
       fontFamily: 'monospace',
-      fontSize: '15px',
+      fontSize: '11px',
       color: '#60a5fa',
     }).setOrigin(1, 0).setDepth(5);
 
@@ -216,7 +216,7 @@ export class ClassSelectScene extends Phaser.Scene {
     const furyColor = ability.furyCost < 0 ? '#4ade80' : '#e94560';
     this.add.text(x + cardW - 15, y + 28, furyStr, {
       fontFamily: 'monospace',
-      fontSize: '15px',
+      fontSize: '11px',
       color: furyColor,
     }).setOrigin(1, 0).setDepth(5);
   }
@@ -234,7 +234,7 @@ export class ClassSelectScene extends Phaser.Scene {
 
     const text = this.add.text(x, y, label, {
       fontFamily: 'monospace',
-      fontSize: '24px',
+      fontSize: '13px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(6);

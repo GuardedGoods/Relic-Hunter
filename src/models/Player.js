@@ -145,6 +145,29 @@ export class Player {
       computed.goldGainBonus = UPGRADE_CONFIG[UPGRADE_TYPES.GOLD_GAIN].baseValue * goldGainLevel;
     }
 
+    // Apply talent bonuses to visible stats
+    if (this.talentPoints) {
+      const tp = this.talentPoints;
+      // Berserker: Rampage (+3% attack per rank)
+      if (tp.rampage) computed.attack *= (1 + tp.rampage * 0.03);
+      // Berserker: Endless Rage (+2% crit damage per rank)
+      if (tp.endless_rage) computed.critDamage += tp.endless_rage * 0.02;
+      // Blademaster: Surgical Strikes (+1% crit chance per rank)
+      if (tp.surgical_strikes) computed.critChance += tp.surgical_strikes * 0.01;
+      // Blademaster: Riposte (+2% dodge per rank — store as stat)
+      if (tp.riposte) computed.dodgeChance = (computed.dodgeChance || 0) + tp.riposte * 0.02;
+      // Warlord: Undying (+2% max HP per rank)
+      if (tp.undying) computed.maxHealth *= (1 + tp.undying * 0.02);
+      // Warlord: Iron Skin (+2% damage reduction per rank — store as stat)
+      if (tp.iron_skin) computed.damageReduction = (computed.damageReduction || 0) + tp.iron_skin * 0.02;
+      // Warlord: Commanding Presence (+1 defense per rank)
+      if (tp.commanding_presence) computed.defense += tp.commanding_presence;
+
+      // Round display values
+      computed.attack = Math.round(computed.attack);
+      computed.maxHealth = Math.round(computed.maxHealth);
+    }
+
     return computed;
   }
 

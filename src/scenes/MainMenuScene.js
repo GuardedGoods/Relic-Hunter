@@ -55,7 +55,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Subtitle
     this.add.text(width / 2, 135, 'Loot-Focused Micro RPG', {
       fontFamily: 'monospace',
-      fontSize: '28px',
+      fontSize: '13px',
       color: '#8888aa',
     }).setOrigin(0.5).setDepth(5);
 
@@ -95,14 +95,14 @@ export class MainMenuScene extends Phaser.Scene {
     // Show current zone info
     this.add.text(width / 2, 240, `Zone: ${this.selectedZone.name}`, {
       fontFamily: 'monospace',
-      fontSize: '24px',
+      fontSize: '11px',
       color: this.selectedZone.color || '#aaaacc',
     }).setOrigin(0.5).setDepth(5);
 
     if (this.maxDepth > 0) {
       this.add.text(width / 2, 260, `Best Depth: ${this.maxDepth}`, {
         fontFamily: 'monospace',
-        fontSize: '22px',
+        fontSize: '14px',
         color: '#888899',
       }).setOrigin(0.5).setDepth(5);
     }
@@ -196,7 +196,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Zone name
     const nameText = this.add.text(x + w / 2, y + 20, zone.name, {
       fontFamily: 'monospace',
-      fontSize: '24px',
+      fontSize: '11px',
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: w - 10 },
@@ -206,7 +206,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Unlock depth
     const depthText = this.add.text(x + w / 2, y + h - 16, `Depth ${zone.unlockDepth}+`, {
       fontFamily: 'monospace',
-      fontSize: '20px',
+      fontSize: '13px',
       color: '#aaaacc',
     }).setOrigin(0.5).setDepth(6);
     container.texts.push(depthText);
@@ -257,7 +257,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const text = this.add.text(x, y, label, {
       fontFamily: 'monospace',
-      fontSize: '30px',
+      fontSize: '13px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(6);
@@ -330,7 +330,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Title
     const titleText = this.add.text(width / 2, panelY + 30, 'UPGRADES', {
       fontFamily: 'monospace',
-      fontSize: '34px',
+      fontSize: '11px',
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
@@ -339,7 +339,7 @@ export class MainMenuScene extends Phaser.Scene {
     // Gold display
     const goldText = this.add.text(width / 2, panelY + 60, `Gold: ${player.gold}`, {
       fontFamily: 'monospace',
-      fontSize: '28px',
+      fontSize: '13px',
       color: '#f0c040',
     }).setOrigin(0.5).setDepth(2);
     container.add(goldText);
@@ -361,7 +361,7 @@ export class MainMenuScene extends Phaser.Scene {
       // Label
       const labelText = this.add.text(panelX + 35, ry + 10, upg.label, {
         fontFamily: 'monospace',
-        fontSize: '28px',
+        fontSize: '13px',
         color: '#ffffff',
       }).setDepth(2);
       container.add(labelText);
@@ -369,7 +369,7 @@ export class MainMenuScene extends Phaser.Scene {
       // Level
       const levelText = this.add.text(panelX + 35, ry + 32, `Level: ${upg.currentLevel} / ${upg.maxLevel}`, {
         fontFamily: 'monospace',
-        fontSize: '24px',
+        fontSize: '11px',
         color: '#aaaacc',
       }).setDepth(2);
       container.add(levelText);
@@ -403,7 +403,7 @@ export class MainMenuScene extends Phaser.Scene {
       const btnLabel = maxed ? 'MAXED' : `${upg.cost} g`;
       const btnText = this.add.text(btnX + btnW / 2, btnY2 + btnH / 2, btnLabel, {
         fontFamily: 'monospace',
-        fontSize: '24px',
+        fontSize: '11px',
         color: maxed ? '#666666' : (canAfford ? '#ffffff' : '#aa6666'),
         fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(3);
@@ -448,7 +448,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const closeText = this.add.text(width / 2, closeBtnY + closeBtnH / 2, 'Close', {
       fontFamily: 'monospace',
-      fontSize: '28px',
+      fontSize: '13px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(3);
@@ -482,12 +482,12 @@ export class MainMenuScene extends Phaser.Scene {
     if (isLoggedIn()) {
       // Show username + logout button
       const userText = this.add.text(width - 20, 16, `⚔ ${getUsername()}`, {
-        fontFamily: 'monospace', fontSize: '24px', color: '#4ade80', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '11px', color: '#4ade80', fontStyle: 'bold',
       }).setOrigin(1, 0).setDepth(10);
       this.authElements.push(userText);
 
       const logoutText = this.add.text(width - 20, 34, '[Logout]', {
-        fontFamily: 'monospace', fontSize: '20px', color: '#888899',
+        fontFamily: 'monospace', fontSize: '13px', color: '#888899',
       }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
       logoutText.on('pointerdown', () => {
         logout();
@@ -499,7 +499,7 @@ export class MainMenuScene extends Phaser.Scene {
     } else {
       // Show login button
       const loginBtn = this.add.text(width - 20, 16, '[Login / Register]', {
-        fontFamily: 'monospace', fontSize: '22px', color: '#60a5fa',
+        fontFamily: 'monospace', fontSize: '14px', color: '#60a5fa',
       }).setOrigin(1, 0).setDepth(10).setInteractive({ useHandCursor: true });
       loginBtn.on('pointerdown', () => this._showLoginModal());
       loginBtn.on('pointerover', () => loginBtn.setColor('#ffffff'));
@@ -534,12 +534,12 @@ export class MainMenuScene extends Phaser.Scene {
     container.add(bg);
 
     container.add(this.add.text(w / 2, my + 20, 'LOGIN / REGISTER', {
-      fontFamily: 'monospace', fontSize: '28px', color: '#e94560', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '13px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(0.5));
 
     // Instructions
     container.add(this.add.text(w / 2, my + 45, 'Enter username and password', {
-      fontFamily: 'monospace', fontSize: '20px', color: '#888899',
+      fontFamily: 'monospace', fontSize: '13px', color: '#888899',
     }).setOrigin(0.5));
 
     // We can't use HTML inputs in Phaser canvas, so use prompt() dialogs
@@ -598,7 +598,7 @@ export class MainMenuScene extends Phaser.Scene {
     container.add(bg);
 
     const label = this.add.text(x, y, text, {
-      fontFamily: 'monospace', fontSize: '24px', color: '#ffffff', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5);
     container.add(label);
 
@@ -623,7 +623,7 @@ export class MainMenuScene extends Phaser.Scene {
     backdrop.on('pointerdown', () => this._closeLeaderboard());
 
     // Panel
-    const pw = 650;
+    const pw = 700;
     const ph = 480;
     const px = w / 2 - pw / 2;
     const py = h / 2 - ph / 2;
@@ -636,16 +636,16 @@ export class MainMenuScene extends Phaser.Scene {
     container.add(bg);
 
     container.add(this.add.text(w / 2, py + 20, 'LEADERBOARD', {
-      fontFamily: 'monospace', fontSize: '30px', color: '#f97316', fontStyle: 'bold',
+      fontFamily: 'monospace', fontSize: '13px', color: '#f97316', fontStyle: 'bold',
     }).setOrigin(0.5));
 
     // Column headers
     const headerY = py + 50;
-    const cols = [px + 10, px + 35, px + 140, px + 215, px + 270, px + 335, px + 410, px + 490];
+    const cols = [px + 10, px + 35, px + 160, px + 245, px + 305, px + 375, px + 455, px + 540];
     const headers = ['#', 'Player', 'Cls', 'Lv', 'Dpth', 'Kills', 'Hit', 'Killed By'];
     headers.forEach((hdr, i) => {
       container.add(this.add.text(cols[i], headerY, hdr, {
-        fontFamily: 'monospace', fontSize: '20px', color: '#888899', fontStyle: 'bold',
+        fontFamily: 'monospace', fontSize: '13px', color: '#888899', fontStyle: 'bold',
       }));
     });
 
@@ -667,16 +667,16 @@ export class MainMenuScene extends Phaser.Scene {
 
     if (entries.length === 0) {
       container.add(this.add.text(w / 2, py + ph / 2, 'No scores yet. Be the first!', {
-        fontFamily: 'monospace', fontSize: '24px', color: '#888899',
+        fontFamily: 'monospace', fontSize: '11px', color: '#888899',
       }).setOrigin(0.5));
     } else {
-      entries.slice(0, 15).forEach((entry, i) => {
-        const ey = headerY + 28 + i * 24;
+      entries.slice(0, 20).forEach((entry, i) => {
+        const ey = headerY + 28 + i * 16;
         const isMe = isLoggedIn() && entry.username === getUsername();
         const rowColor = isMe ? '#f0c040' : '#ccccdd';
         const rankColor = i < 3 ? '#f97316' : rowColor;
 
-        const fs = '20px';
+        const fs = '11px';
         container.add(this.add.text(cols[0], ey, `${entry.rank}`, {
           fontFamily: 'monospace', fontSize: fs, color: rankColor, fontStyle: i < 3 ? 'bold' : 'normal',
         }));
