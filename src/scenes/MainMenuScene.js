@@ -114,8 +114,7 @@ export class MainMenuScene extends Phaser.Scene {
     this._createButton(width / 2, btnY, 200, 48, 'Start Run', 0xe94560, () => {
       this.cameras.main.fadeOut(300, 0x1a, 0x1a, 0x2e);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('GameScene', {
-          zone: this.selectedZone,
+        this.scene.start('ClassSelectScene', {
           saveData: this._hasSave ? this.savedPlayer : null,
         });
       });
@@ -642,8 +641,8 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Column headers
     const headerY = py + 50;
-    const cols = [px + 20, px + 50, px + 180, px + 260, px + 330, px + 410];
-    const headers = ['#', 'Player', 'Depth', 'Kills', 'Gold', 'Zone'];
+    const cols = [px + 20, px + 50, px + 180, px + 250, px + 320];
+    const headers = ['#', 'Player', 'Depth', 'Kills', 'Killed By'];
     headers.forEach((hdr, i) => {
       container.add(this.add.text(cols[i], headerY, hdr, {
         fontFamily: 'monospace', fontSize: '10px', color: '#888899', fontStyle: 'bold',
@@ -689,11 +688,8 @@ export class MainMenuScene extends Phaser.Scene {
         container.add(this.add.text(cols[3], ey, `${entry.kills}`, {
           fontFamily: 'monospace', fontSize: '10px', color: rowColor,
         }));
-        container.add(this.add.text(cols[4], ey, `${entry.gold}`, {
-          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
-        }));
-        container.add(this.add.text(cols[5], ey, entry.zone || '', {
-          fontFamily: 'monospace', fontSize: '10px', color: rowColor,
+        container.add(this.add.text(cols[4], ey, entry.killed_by || '--', {
+          fontFamily: 'monospace', fontSize: '10px', color: entry.killed_by ? '#e94560' : '#555566',
         }));
       });
     }

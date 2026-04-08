@@ -5,6 +5,10 @@ import { EmberStormSystem } from '../systems/EmberStormSystem.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { RARITY_COLORS, ZONES } from '../data/constants.js';
 
+// Combat area layout constants
+const COMBAT_W = 680;
+const COMBAT_CX = 340; // center X of combat area
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
@@ -45,6 +49,8 @@ export class GameScene extends Phaser.Scene {
       bestItem: null,
       startDepth: 0,
       died: false,
+      killedBy: '',
+      highestDamage: 0,
       startTime: Date.now(),
     };
 
@@ -62,39 +68,58 @@ export class GameScene extends Phaser.Scene {
 
     // ---- Draw combat area background (zone-specific, left side: 0-500px) ----
     const combatBg = this.add.graphics();
-    this._drawZoneBackground(combatBg, 500, height, this.zoneData.id);
+    this._drawZoneBackground(combatBg, COMBAT_W, height, this.zoneData.id);
     // Subtle border on right edge
     combatBg.lineStyle(2, 0x333355, 1);
-    combatBg.lineBetween(499, 0, 499, height);
+    combatBg.lineBetween(COMBAT_W - 1, 0, COMBAT_W - 1, height);
 
     // ---- Zone + depth header ----
-    this.zoneLabel = this.add.text(250, 16, this.zoneData.name, {
+    this.zoneLabel = this.add.text(COMBAT_CX, 16, this.zoneData.name, {
       fontFamily: 'monospace',
       fontSize: '20px',
       color: this.zoneData.color || '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
 
-    this.depthLabel = this.add.text(250, 40, `Depth: ${this.currentDepth}`, {
+    this.depthLabel = this.add.text(COMBAT_CX, 40, `Depth: ${this.currentDepth}`, {
       fontFamily: 'monospace',
       fontSize: '14px',
       color: '#aaaacc',
     }).setOrigin(0.5).setDepth(2);
 
-    this.killCountLabel = this.add.text(250, 58, 'Kills: 0', {
+    this.killCountLabel = this.add.text(COMBAT_CX, 58, 'Kills: 0', {
       fontFamily: 'monospace',
       fontSize: '12px',
       color: '#888899',
     }).setOrigin(0.5).setDepth(2);
 
+    // ---- Depth Progress Bar ----
+    // 5 kills per depth. Shows milestones for elites and bosses.
+    const barX = 20;
+    const barY = 78;
+    const barW = COMBAT_W - 40;
+    const barH = 16;
+    this.progressBarBg = this.add.graphics().setDepth(2);
+    this.progressBarBg.fillStyle(0x0a0a18, 1);
+    this.progressBarBg.fillRoundedRect(barX, barY, barW, barH, 4);
+    this.progressBarBg.lineStyle(1, 0x333355, 0.8);
+    this.progressBarBg.strokeRoundedRect(barX, barY, barW, barH, 4);
+
+    this.progressBarFill = this.add.graphics().setDepth(3);
+    this.progressBarMarkers = this.add.graphics().setDepth(4);
+    this.progressBarText = this.add.text(barX + barW / 2, barY + barH / 2, '', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(5);
+    this._updateProgressBar();
+
     // Ember Storm indicator (hidden initially)
     this.stormOverlay = this.add.graphics().setDepth(1).setAlpha(0);
-    this.stormLabel = this.add.text(250, 76, '', {
+    this.stormLabel = this.add.text(COMBAT_CX, 76, '', {
       fontFamily: 'monospace', fontSize: '11px', color: '#ffdd44', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2).setVisible(false);
 
     // ---- Player character (left side) ----
-    this.playerX = 140;
+    this.playerX = Math.round(COMBAT_W * 0.25);
     this.playerY = 350;
     this.playerGfx = this.add.graphics().setDepth(3);
     this._drawPlayer();
@@ -117,7 +142,7 @@ export class GameScene extends Phaser.Scene {
     this._updatePlayerHealthBar();
 
     // ---- Enemy character (right side of combat area) ----
-    this.enemyX = 360;
+    this.enemyX = Math.round(COMBAT_W * 0.72);
     this.enemyY = 350;
     this.enemyGfx = this.add.graphics().setDepth(3);
     this._drawEnemy();
@@ -167,7 +192,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     const pauseBtnW = 160;
     const pauseBtnH = 36;
-    const pauseBtnX = 250; // center of combat area
+    const pauseBtnX = COMBAT_CX; // center of combat area
     const pauseBtnY = height - 30;
     this.pauseBtnBg = this.add.graphics();
     this.pauseBtnBg.fillStyle(0x0f3460, 1);
@@ -204,11 +229,11 @@ export class GameScene extends Phaser.Scene {
     this.pauseOverlay.setVisible(false);
     this.pauseOverlay.setDepth(50);
 
-    this.pauseText = this.add.text(250, height / 2 - 40, '', {
+    this.pauseText = this.add.text(COMBAT_CX, height / 2 - 40, '', {
       fontFamily: 'monospace', fontSize: '20px', color: '#e94560', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(51).setVisible(false);
 
-    this.pauseSubText = this.add.text(250, height / 2, '', {
+    this.pauseSubText = this.add.text(COMBAT_CX, height / 2, '', {
       fontFamily: 'monospace', fontSize: '12px', color: '#aaaacc',
     }).setOrigin(0.5).setDepth(51).setVisible(false);
 
@@ -223,7 +248,7 @@ export class GameScene extends Phaser.Scene {
     this.speedIndex = 0;
     const speedBtnW = 60;
     const speedBtnH = 28;
-    const speedBtnX = 460;
+    const speedBtnX = COMBAT_W - 50;
     const speedBtnY = height - 30;
     this.speedBtnBg = this.add.graphics();
     this._drawSpeedBtn(speedBtnX, speedBtnY, speedBtnW, speedBtnH);
@@ -259,7 +284,7 @@ export class GameScene extends Phaser.Scene {
     const abSize = 52;
     const abGap = 6;
     const abTotalW = abilityDefs.length * abSize + (abilityDefs.length - 1) * abGap;
-    const abStartX = 250 - abTotalW / 2; // centered in combat area
+    const abStartX = COMBAT_CX - abTotalW / 2; // centered in combat area
     const abBarY = 440;
 
     // Hotbar background strip
@@ -396,6 +421,9 @@ export class GameScene extends Phaser.Scene {
     // Update ability cooldown displays
     this._updateAbilityBar();
 
+    // Update depth progress bar
+    this._updateProgressBar();
+
     // Ember Storm tick
     if (this.emberStorm.active) {
       const stormEnded = this.emberStorm.tick(delta * this.speedMultiplier);
@@ -405,7 +433,7 @@ export class GameScene extends Phaser.Scene {
       const pulse = 0.08 + Math.sin(Date.now() / 300) * 0.04;
       this.stormOverlay.clear();
       this.stormOverlay.fillStyle(0xff8800, pulse);
-      this.stormOverlay.fillRect(0, 0, 500, this.scale.height);
+      this.stormOverlay.fillRect(0, 0, COMBAT_W, this.scale.height);
       this.stormOverlay.setAlpha(1);
       if (stormEnded) {
         this.stormOverlay.clear().setAlpha(0);
@@ -820,6 +848,47 @@ export class GameScene extends Phaser.Scene {
     this.playerHealthText.setPosition(this.playerX, by - 2);
   }
 
+  _updateProgressBar() {
+    const killsPerDepth = 5;
+    const killsInDepth = this.runStats.enemiesKilled % killsPerDepth;
+    const progress = killsInDepth / killsPerDepth;
+    const barX = 20;
+    const barY = 78;
+    const barW = COMBAT_W - 40;
+    const barH = 16;
+    const isBossDepth = (this.currentDepth + 1) > 0 && (this.currentDepth + 1) % 15 === 0;
+
+    // Fill bar
+    this.progressBarFill.clear();
+    if (progress > 0) {
+      this.progressBarFill.fillStyle(isBossDepth ? 0xffdd44 : 0x4ade80, 1);
+      this.progressBarFill.fillRoundedRect(barX + 2, barY + 2, Math.max(0, (barW - 4) * progress), barH - 4, 3);
+    }
+
+    // Draw milestone markers (tick marks at each kill position)
+    this.progressBarMarkers.clear();
+    for (let i = 1; i < killsPerDepth; i++) {
+      const mx = barX + (barW * i / killsPerDepth);
+      this.progressBarMarkers.lineStyle(1, 0x555577, 0.6);
+      this.progressBarMarkers.lineBetween(mx, barY + 2, mx, barY + barH - 2);
+    }
+
+    // Boss star at end of bar if next depth is a boss depth
+    if (isBossDepth) {
+      this.progressBarMarkers.fillStyle(0xffdd44, 1);
+      const sx = barX + barW - 8;
+      this.progressBarMarkers.fillCircle(sx, barY + barH / 2, 4);
+    }
+
+    // Elite indicator if current enemy is elite
+    const enemy = this.combatSystem ? this.combatSystem.enemy : null;
+    const enemyLabel = enemy && enemy.isBoss ? 'BOSS' : (enemy && enemy.isElite ? 'ELITE' : '');
+
+    this.progressBarText.setText(
+      `Depth ${this.currentDepth} — ${killsInDepth}/${killsPerDepth}${enemyLabel ? '  [' + enemyLabel + ']' : ''}`
+    );
+  }
+
   _updateEnemyDisplay() {
     const enemy = this.combatSystem.enemy;
     if (!enemy) return;
@@ -863,6 +932,9 @@ export class GameScene extends Phaser.Scene {
 
   _onPlayerAttack(data) {
     const { damage, isCrit } = data;
+
+    // Track highest damage
+    if (damage > this.runStats.highestDamage) this.runStats.highestDamage = damage;
 
     // Flash enemy red
     this.enemyGfx.setAlpha(0.4);
@@ -985,7 +1057,7 @@ export class GameScene extends Phaser.Scene {
             this.emberStorm.startStorm(this.currentDepth);
             this.cameras.main.flash(400, 255, 150, 30);
             this._addCombatLog('A pulse from the Maw... EMBER STORM!', '#ffdd44');
-            const stormText = this.add.text(250, 200, 'EMBER STORM!', {
+            const stormText = this.add.text(COMBAT_CX, 200, 'EMBER STORM!', {
               fontFamily: 'monospace', fontSize: '22px', color: '#ffdd44', fontStyle: 'bold',
             }).setOrigin(0.5).setDepth(20).setAlpha(0);
             stormText.setShadow(0, 0, '#f97316', 8, true, true);
@@ -1012,7 +1084,7 @@ export class GameScene extends Phaser.Scene {
       // Screen flash gold
       this.cameras.main.flash(300, 255, 200, 50);
       // Victory text
-      const bossText = this.add.text(250, 200, 'BOSS DEFEATED!', {
+      const bossText = this.add.text(COMBAT_CX, 200, 'BOSS DEFEATED!', {
         fontFamily: 'monospace', fontSize: '24px', color: '#ffdd44', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(20).setAlpha(0);
       bossText.setShadow(0, 0, '#f97316', 8, true, true);
@@ -1050,6 +1122,7 @@ export class GameScene extends Phaser.Scene {
 
   _onPlayerDeath(data) {
     this.runStats.died = true;
+    this.runStats.killedBy = data.killedBy || 'Unknown';
     this.combatSystem.active = false;
 
     // Player death visual
@@ -1063,7 +1136,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.flash(500, 200, 50, 50);
 
     // "YOU DIED" text
-    const deathText = this.add.text(250, 250, 'YOU DIED', {
+    const deathText = this.add.text(COMBAT_CX, 250, 'YOU DIED', {
       fontFamily: 'monospace',
       fontSize: '36px',
       color: '#e94560',
@@ -1098,7 +1171,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     // Level up notification in combat area
-    const lvlText = this.add.text(250, 200, `LEVEL UP! Lv.${data.newLevel}`, {
+    const lvlText = this.add.text(COMBAT_CX, 200, `LEVEL UP! Lv.${data.newLevel}`, {
       fontFamily: 'monospace',
       fontSize: '20px',
       color: '#f0c040',
@@ -1171,7 +1244,7 @@ export class GameScene extends Phaser.Scene {
   _addCombatLog(message, color) {
     const maxLogs = 5;
 
-    const logText = this.add.text(250, this.combatLogY, message, {
+    const logText = this.add.text(COMBAT_CX, this.combatLogY, message, {
       fontFamily: 'monospace',
       fontSize: '11px',
       color: color || '#aaaacc',
@@ -1214,7 +1287,7 @@ export class GameScene extends Phaser.Scene {
   _createRetreatButton() {
     const btnW = 90;
     const btnH = 32;
-    const btnX = 450;
+    const btnX = COMBAT_W - 50;
     const btnY = 20;
 
     const g = this.add.graphics().setDepth(8);
@@ -1373,7 +1446,7 @@ export class GameScene extends Phaser.Scene {
       // Show pause overlay on combat area
       this.pauseOverlay.clear();
       this.pauseOverlay.fillStyle(0x000000, 0.5);
-      this.pauseOverlay.fillRect(0, 0, 500, this.scale.height);
+      this.pauseOverlay.fillRect(0, 0, COMBAT_W, this.scale.height);
       this.pauseOverlay.setVisible(true);
       this.pauseText.setText('COMBAT PAUSED').setVisible(true);
       this.pauseSubText.setText('Manage your inventory and equipment\nClick RESUME to continue fighting').setVisible(true);
@@ -1391,7 +1464,7 @@ export class GameScene extends Phaser.Scene {
     const { height } = this.scale;
     const pauseBtnW = 160;
     const pauseBtnH = 36;
-    const pauseBtnX = 250;
+    const pauseBtnX = COMBAT_CX;
     const pauseBtnY = height - 30;
 
     this.pauseBtnBg.clear();

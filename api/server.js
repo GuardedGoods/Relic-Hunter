@@ -57,10 +57,20 @@ db.exec(`
     zone TEXT DEFAULT 'ashveil',
     duration_seconds INTEGER DEFAULT 0,
     died INTEGER DEFAULT 0,
+    killed_by TEXT DEFAULT '',
+    highest_damage INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 `);
+
+// Migrate existing databases: add new columns if they don't exist
+try {
+  db.exec(`ALTER TABLE scores ADD COLUMN killed_by TEXT DEFAULT ''`);
+} catch (_) { /* column already exists */ }
+try {
+  db.exec(`ALTER TABLE scores ADD COLUMN highest_damage INTEGER DEFAULT 0`);
+} catch (_) { /* column already exists */ }
 
 // ---------------------------------------------------------------------------
 // Prepared statements
@@ -72,17 +82,17 @@ const stmts = {
   insertSession: db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)'),
   findSession: db.prepare('SELECT s.user_id, u.username FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = ?'),
   insertScore: db.prepare(`
-    INSERT INTO scores (user_id, username, depth, kills, gold, zone, duration_seconds, died)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO scores (user_id, username, depth, kills, gold, zone, duration_seconds, died, killed_by, highest_damage)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `),
   leaderboard: db.prepare(`
-    SELECT username, depth, kills, gold, zone, created_at
+    SELECT username, depth, kills, gold, zone, killed_by, highest_damage, created_at
     FROM scores
     ORDER BY depth DESC, kills DESC, gold DESC
     LIMIT 50
   `),
   personalRuns: db.prepare(`
-    SELECT depth, kills, gold, zone, duration_seconds, died, created_at
+    SELECT depth, kills, gold, zone, duration_seconds, died, killed_by, highest_damage, created_at
     FROM scores
     WHERE user_id = ?
     ORDER BY created_at DESC
@@ -206,7 +216,7 @@ app.post('/api/login', async (req, res) => {
 // --- Submit score -----------------------------------------------------------
 app.post('/api/scores', requireAuth, (req, res) => {
   try {
-    const { depth, kills, gold, zone, durationSeconds, died } = req.body || {};
+    const { depth, kills, gold, zone, durationSeconds, died, killedBy, highestDamage } = req.body || {};
 
     if (depth == null || typeof depth !== 'number' || !Number.isInteger(depth) || depth < 0) {
       return res.status(400).json({ error: 'depth must be a non-negative integer.' });
@@ -217,6 +227,8 @@ app.post('/api/scores', requireAuth, (req, res) => {
     const safeZone = (typeof zone === 'string' && zone.length > 0 && zone.length <= 50) ? zone : 'ashveil';
     const safeDuration = (typeof durationSeconds === 'number' && Number.isInteger(durationSeconds) && durationSeconds >= 0) ? durationSeconds : 0;
     const safeDied = died ? 1 : 0;
+    const safeKilledBy = (typeof killedBy === 'string' && killedBy.length <= 100) ? killedBy : '';
+    const safeHighestDamage = (typeof highestDamage === 'number' && Number.isInteger(highestDamage) && highestDamage >= 0) ? highestDamage : 0;
 
     stmts.insertScore.run(
       req.userId,
@@ -227,6 +239,8 @@ app.post('/api/scores', requireAuth, (req, res) => {
       safeZone,
       safeDuration,
       safeDied,
+      safeKilledBy,
+      safeHighestDamage,
     );
 
     res.status(201).json({ message: 'Score recorded.' });
@@ -247,6 +261,8 @@ app.get('/api/leaderboard', (_req, res) => {
       kills: row.kills,
       gold: row.gold,
       zone: row.zone,
+      killed_by: row.killed_by || '',
+      highest_damage: row.highest_damage || 0,
       date: formatDate(row.created_at),
     }));
 
@@ -268,6 +284,8 @@ app.get('/api/leaderboard/personal', requireAuth, (req, res) => {
       zone: row.zone,
       durationSeconds: row.duration_seconds,
       died: row.died === 1,
+      killed_by: row.killed_by || '',
+      highest_damage: row.highest_damage || 0,
       date: formatDate(row.created_at),
     }));
 

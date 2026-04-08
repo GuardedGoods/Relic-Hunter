@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { RARITY_COLORS, SLOT, INVENTORY_COLS, INVENTORY_ROWS, INVENTORY_SIZE, ITEM_SETS, RARITY, RARITY_ORDER } from '../data/constants.js';
 import { compareItems, formatAffix, getItemScore } from '../systems/InventorySystem.js';
 
-const UI_X = 504;
-const UI_W = 452;
+const UI_X = 680;
+const UI_W = 596;
 const PANEL_COLOR = 0x16213e;
 const PANEL_BORDER = 0x333355;
 const ACCENT = 0xe94560;

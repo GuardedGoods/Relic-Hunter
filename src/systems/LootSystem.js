@@ -41,7 +41,7 @@ function pick(arr) {
 function rollValue(min, max, statMult, playerLevel) {
   const levelScale = 1 + (playerLevel - 1) * 0.04; // +4% per level beyond 1
   const base = min + Math.random() * (max - min);
-  return Math.round(base * statMult * levelScale * 100) / 100;
+  return Math.ceil(base * statMult * levelScale);
 }
 
 /**

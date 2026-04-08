@@ -81,7 +81,7 @@ export class PostRunScene extends Phaser.Scene {
 
     // ---- Summary panel ----
     const panelW = 500;
-    const panelH = 340;
+    const panelH = 410;
     const panelX = (width - panelW) / 2;
     const panelY = 100;
 
@@ -141,6 +141,16 @@ export class PostRunScene extends Phaser.Scene {
     }
     sy += 10;
 
+    // Killed By (only if died)
+    if (died && runData.killedBy) {
+      this._addStatRow(leftX, valueX, sy, 'Killed By:', `${runData.killedBy}`, '#e94560');
+      sy += 36;
+    }
+
+    // Highest Hit
+    this._addStatRow(leftX, valueX, sy, 'Highest Hit:', `${runData.highestDamage || 0}`, '#f97316');
+    sy += 36;
+
     // Best item found
     if (bestItem) {
       const bestColor = RARITY_COLORS[bestItem.rarity] || '#ffffff';
@@ -168,7 +178,7 @@ export class PostRunScene extends Phaser.Scene {
     const btnY = panelY + panelH + 30;
 
     // New Run button
-    this._createButton(width / 2 - 120, btnY, 200, 48, 'New Run', 0xe94560, () => {
+    this._createButton(width / 2 - 140, btnY, 200, 48, 'New Run', 0xe94560, () => {
       this.cameras.main.fadeOut(300, 0x1a, 0x1a, 0x2e);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('MainMenuScene');
@@ -176,8 +186,17 @@ export class PostRunScene extends Phaser.Scene {
     });
 
     // Upgrades button
-    this._createButton(width / 2 + 120, btnY, 200, 48, 'Upgrades', 0x16213e, () => {
+    this._createButton(width / 2 + 140, btnY, 200, 48, 'Upgrades', 0x16213e, () => {
       this._showUpgradePanel();
+    });
+
+    // Leaderboard button
+    this._createButton(width / 2, btnY + 60, 200, 48, 'Leaderboard', 0x16213e, () => {
+      this.cameras.main.fadeOut(300, 0x1a, 0x1a, 0x2e);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('MainMenuScene');
+        // Leaderboard will be accessible from main menu
+      });
     });
 
     // ---- Auto-save ----
@@ -197,6 +216,8 @@ export class PostRunScene extends Phaser.Scene {
         zone: this.registry.get('selectedZone') || 'ashveil',
         durationSeconds: Math.round((Date.now() - (runData.startTime || Date.now())) / 1000),
         died: died || false,
+        killedBy: runData.killedBy || '',
+        highestDamage: runData.highestDamage || 0,
       });
 
       this.add.text(width / 2, btnY - 20, 'Score submitted to leaderboard!', {
