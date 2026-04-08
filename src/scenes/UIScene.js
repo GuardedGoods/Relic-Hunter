@@ -8,6 +8,15 @@ const PANEL_COLOR = 0x16213e;
 const PANEL_BORDER = 0x333355;
 const ACCENT = 0xe94560;
 
+const SLOT_BG_COLORS = {
+  weapon: 0x3a2020,
+  helmet: 0x3a3020,
+  chest: 0x203a20,
+  gloves: 0x202a3a,
+  boots: 0x302030,
+  ring: 0x303020,
+};
+
 const SLOT_ICONS = {
   [SLOT.WEAPON]: '⚔',
   [SLOT.HELMET]: '👑',
@@ -51,6 +60,9 @@ export class UIScene extends Phaser.Scene {
       gameScene.events.on('playerHealthChanged', this._onHealthChanged, this);
       gameScene.events.on('statsChanged', this._onStatsChanged, this);
       gameScene.events.on('pauseToggled', this._onPauseToggled, this);
+      gameScene.events.on('talentTreeToggled', (isOpen) => {
+        this.scene.setVisible(!isOpen);
+      });
     }
 
     // ---- Set bonus indicator ----
@@ -188,7 +200,7 @@ export class UIScene extends Phaser.Scene {
     const panelX = UI_X;
     const panelY = 130;
     const panelW = UI_W;
-    const panelH = 170;
+    const panelH = 220;
 
     const bg = this.add.graphics().setDepth(1);
     bg.fillStyle(PANEL_COLOR, 0.95);
@@ -204,6 +216,138 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(2);
 
     this._refreshEquipmentSlots();
+
+    // Mass Discard buttons
+    const trashLabelY = panelY + 156;
+    this.add.text(panelX + 14, trashLabelY, 'Mass Discard:', {
+      fontFamily: 'monospace', fontSize: '9px', color: '#666677',
+    }).setDepth(2);
+
+    const trashRarities = [
+      { rarity: RARITY.COMMON, label: 'Com', color: RARITY_COLORS[RARITY.COMMON] },
+      { rarity: RARITY.UNCOMMON, label: 'Unc', color: RARITY_COLORS[RARITY.UNCOMMON] },
+      { rarity: RARITY.RARE, label: 'Rar', color: RARITY_COLORS[RARITY.RARE] },
+      { rarity: RARITY.EPIC, label: 'Epc', color: RARITY_COLORS[RARITY.EPIC] },
+      { rarity: RARITY.LEGENDARY, label: 'Leg', color: RARITY_COLORS[RARITY.LEGENDARY] },
+    ];
+
+    const trashBtnW = 32;
+    const trashBtnH = 14;
+    const trashStartX = panelX + 100;
+    const trashY = trashLabelY - 1;
+
+    trashRarities.forEach((tr, i) => {
+      const tx = trashStartX + i * (trashBtnW + 2);
+      const tbg = this.add.graphics().setDepth(2);
+      tbg.fillStyle(0x1a1020, 1);
+      tbg.fillRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
+      const trashColorInt = Phaser.Display.Color.HexStringToColor(tr.color).color;
+      tbg.lineStyle(1, trashColorInt, 0.5);
+      tbg.strokeRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
+
+      const tLabel = this.add.text(tx + trashBtnW / 2, trashY + trashBtnH / 2, tr.label, {
+        fontFamily: 'monospace', fontSize: '7px', color: tr.color,
+      }).setOrigin(0.5).setDepth(3);
+
+      const tHit = this.add.rectangle(tx + trashBtnW / 2, trashY + trashBtnH / 2, trashBtnW, trashBtnH)
+        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+
+      tHit.on('pointerover', () => tLabel.setColor('#ffffff'));
+      tHit.on('pointerout', () => tLabel.setColor(tr.color));
+      tHit.on('pointerdown', () => {
+        const items = this.player.inventory.filter(it => it.rarity === tr.rarity);
+        if (items.length > 0) {
+          items.forEach(it => this.player.removeFromInventory(it.id));
+          this._showFloatingMessage(`Trashed ${items.length} ${tr.rarity}`, tr.color);
+          this._refreshAll();
+        }
+      });
+    });
+
+    // Rarity Filter row
+    const filterLabelY = trashY + trashBtnH + 3;
+    this.add.text(panelX + 14, filterLabelY, 'Rarity Filter:', {
+      fontFamily: 'monospace', fontSize: '8px', color: '#555566',
+    }).setDepth(2);
+
+    if (!this.player.lootFilter) this.player.lootFilter = {};
+    this.filterElements = [];
+
+    trashRarities.forEach((tr, i) => {
+      const fx = trashStartX + i * (trashBtnW + 2);
+      const fy = filterLabelY - 1;
+      const isSkipped = !!this.player.lootFilter[tr.rarity];
+
+      const fbg = this.add.graphics().setDepth(2);
+      if (isSkipped) {
+        fbg.fillStyle(0x331111, 1);
+        fbg.fillRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+        fbg.lineStyle(1, 0xe94560, 0.6);
+        fbg.strokeRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+      } else {
+        fbg.fillStyle(0x0a0a18, 1);
+        fbg.fillRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+        fbg.lineStyle(1, 0x333344, 0.3);
+        fbg.strokeRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
+      }
+      this.filterElements.push(fbg);
+
+      const fLabel = this.add.text(fx + trashBtnW / 2, fy + trashBtnH / 2,
+        isSkipped ? '\u2715' : '\u2014', {
+        fontFamily: 'monospace', fontSize: '8px',
+        color: isSkipped ? '#e94560' : '#333344',
+        fontStyle: isSkipped ? 'bold' : 'normal',
+      }).setOrigin(0.5).setDepth(3);
+      this.filterElements.push(fLabel);
+
+      const fHit = this.add.rectangle(fx + trashBtnW / 2, fy + trashBtnH / 2, trashBtnW, trashBtnH)
+        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+      this.filterElements.push(fHit);
+
+      fHit.on('pointerdown', () => {
+        this.player.lootFilter[tr.rarity] = !this.player.lootFilter[tr.rarity];
+        // Rebuild equipment panel to reflect new filter state
+        this._drawEquipmentPanel();
+      });
+    });
+
+    // "Only Upgrades" toggle button
+    if (typeof this.player.filterUpgradesOnly === 'undefined') {
+      this.player.filterUpgradesOnly = false;
+    }
+    const upgToggleX = trashStartX + 5 * (trashBtnW + 2) + 6;
+    const upgToggleY = filterLabelY - 1;
+    const upgToggleW = 90;
+    const upgToggleH = trashBtnH;
+    const isUpgOn = this.player.filterUpgradesOnly;
+
+    const upgBg = this.add.graphics().setDepth(2);
+    if (isUpgOn) {
+      upgBg.fillStyle(0x1a331a, 1);
+      upgBg.fillRoundedRect(upgToggleX, upgToggleY, upgToggleW, upgToggleH, 2);
+      upgBg.lineStyle(1, 0x4ade80, 0.6);
+      upgBg.strokeRoundedRect(upgToggleX, upgToggleY, upgToggleW, upgToggleH, 2);
+    } else {
+      upgBg.fillStyle(0x0a0a18, 1);
+      upgBg.fillRoundedRect(upgToggleX, upgToggleY, upgToggleW, upgToggleH, 2);
+      upgBg.lineStyle(1, 0x333344, 0.3);
+      upgBg.strokeRoundedRect(upgToggleX, upgToggleY, upgToggleW, upgToggleH, 2);
+    }
+
+    const checkMark = isUpgOn ? '[\u2713] Only Upgrades' : '[ ] Only Upgrades';
+    const upgLabel = this.add.text(upgToggleX + upgToggleW / 2, upgToggleY + upgToggleH / 2, checkMark, {
+      fontFamily: 'monospace', fontSize: '7px',
+      color: isUpgOn ? '#4ade80' : '#555566',
+      fontStyle: isUpgOn ? 'bold' : 'normal',
+    }).setOrigin(0.5).setDepth(3);
+
+    const upgHit = this.add.rectangle(upgToggleX + upgToggleW / 2, upgToggleY + upgToggleH / 2, upgToggleW, upgToggleH)
+      .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
+
+    upgHit.on('pointerdown', () => {
+      this.player.filterUpgradesOnly = !this.player.filterUpgradesOnly;
+      this._drawEquipmentPanel();
+    });
   }
 
   _refreshEquipmentSlots() {
@@ -297,9 +441,9 @@ export class UIScene extends Phaser.Scene {
 
   _drawInventoryPanel() {
     this.invPanelX = UI_X;
-    this.invPanelY = 306;
+    this.invPanelY = 356;
     this.invPanelW = UI_W;
-    const panelH = 330;
+    const panelH = 360;
 
     const bg = this.add.graphics().setDepth(1);
     bg.fillStyle(PANEL_COLOR, 0.95);
@@ -314,103 +458,6 @@ export class UIScene extends Phaser.Scene {
       color: '#e94560',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(2);
-
-    const panelX = this.invPanelX;
-    const panelY = this.invPanelY;
-    const panelW = this.invPanelW;
-
-    // Trash by rarity buttons - clear label
-    this.add.text(panelX + 14, panelY + 4, 'Trash:', {
-      fontFamily: 'monospace', fontSize: '9px', color: '#666677',
-    }).setDepth(2);
-
-    const trashRarities = [
-      { rarity: RARITY.COMMON, label: 'Com', color: RARITY_COLORS[RARITY.COMMON] },
-      { rarity: RARITY.UNCOMMON, label: 'Unc', color: RARITY_COLORS[RARITY.UNCOMMON] },
-      { rarity: RARITY.RARE, label: 'Rar', color: RARITY_COLORS[RARITY.RARE] },
-      { rarity: RARITY.EPIC, label: 'Epc', color: RARITY_COLORS[RARITY.EPIC] },
-      { rarity: RARITY.LEGENDARY, label: 'Leg', color: RARITY_COLORS[RARITY.LEGENDARY] },
-    ];
-
-    const trashBtnW = 32;
-    const trashBtnH = 14;
-    const trashStartX = panelX + 50;
-    const trashY = panelY + 3;
-
-    trashRarities.forEach((tr, i) => {
-      const tx = trashStartX + i * (trashBtnW + 2);
-      const tbg = this.add.graphics().setDepth(2);
-      tbg.fillStyle(0x1a1020, 1);
-      tbg.fillRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
-      const trashColorInt = Phaser.Display.Color.HexStringToColor(tr.color).color;
-      tbg.lineStyle(1, trashColorInt, 0.5);
-      tbg.strokeRoundedRect(tx, trashY, trashBtnW, trashBtnH, 2);
-
-      const tLabel = this.add.text(tx + trashBtnW / 2, trashY + trashBtnH / 2, tr.label, {
-        fontFamily: 'monospace', fontSize: '7px', color: tr.color,
-      }).setOrigin(0.5).setDepth(3);
-
-      const tHit = this.add.rectangle(tx + trashBtnW / 2, trashY + trashBtnH / 2, trashBtnW, trashBtnH)
-        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
-
-      tHit.on('pointerover', () => tLabel.setColor('#ffffff'));
-      tHit.on('pointerout', () => tLabel.setColor(tr.color));
-      tHit.on('pointerdown', () => {
-        const items = this.player.inventory.filter(it => it.rarity === tr.rarity);
-        if (items.length > 0) {
-          items.forEach(it => this.player.removeFromInventory(it.id));
-          this._showFloatingMessage(`Trashed ${items.length} ${tr.rarity}`, tr.color);
-          this._refreshAll();
-        }
-      });
-    });
-
-    // Auto-skip filter row
-    this.add.text(panelX + 14, trashY + trashBtnH + 3, 'Auto-skip:', {
-      fontFamily: 'monospace', fontSize: '8px', color: '#555566',
-    }).setDepth(2);
-
-    if (!this.player.lootFilter) this.player.lootFilter = {};
-    this.filterElements = [];
-
-    trashRarities.forEach((tr, i) => {
-      const fx = trashStartX + i * (trashBtnW + 2);
-      const fy = trashY + trashBtnH + 2;
-      const isSkipped = !!this.player.lootFilter[tr.rarity];
-
-      const fbg = this.add.graphics().setDepth(2);
-      if (isSkipped) {
-        fbg.fillStyle(0x331111, 1);
-        fbg.fillRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
-        fbg.lineStyle(1, 0xe94560, 0.6);
-        fbg.strokeRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
-      } else {
-        fbg.fillStyle(0x0a0a18, 1);
-        fbg.fillRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
-        fbg.lineStyle(1, 0x333344, 0.3);
-        fbg.strokeRoundedRect(fx, fy, trashBtnW, trashBtnH, 2);
-      }
-      this.filterElements.push(fbg);
-
-      const fLabel = this.add.text(fx + trashBtnW / 2, fy + trashBtnH / 2,
-        isSkipped ? '\u2715' : '\u2014', {
-        fontFamily: 'monospace', fontSize: '8px',
-        color: isSkipped ? '#e94560' : '#333344',
-        fontStyle: isSkipped ? 'bold' : 'normal',
-      }).setOrigin(0.5).setDepth(3);
-      this.filterElements.push(fLabel);
-
-      const fHit = this.add.rectangle(fx + trashBtnW / 2, fy + trashBtnH / 2, trashBtnW, trashBtnH)
-        .setInteractive({ useHandCursor: true }).setAlpha(0.001).setDepth(4);
-      this.filterElements.push(fHit);
-
-      fHit.on('pointerdown', () => {
-        this.player.lootFilter[tr.rarity] = !this.player.lootFilter[tr.rarity];
-        // Rebuild inventory panel to reflect new filter state
-        this._drawInventoryPanel();
-      });
-    });
-
 
     this._refreshInventoryGrid();
   }
@@ -442,7 +489,9 @@ export class UIScene extends Phaser.Scene {
         const item = this.player.inventory[idx] || null;
 
         const cellBg = this.add.graphics().setDepth(2);
-        cellBg.fillStyle(0x0f3460, 0.5);
+        const slotBgKey = item ? (item.slot === SLOT.RING ? 'ring' : item.slot) : null;
+        const cellFillColor = (slotBgKey && SLOT_BG_COLORS[slotBgKey]) ? SLOT_BG_COLORS[slotBgKey] : 0x0f3460;
+        cellBg.fillStyle(cellFillColor, 0.5);
         cellBg.fillRoundedRect(cx, cy, cellW, cellH, 4);
         cellBg.lineStyle(1, item ? 0x555577 : 0x333355, 1);
         cellBg.strokeRoundedRect(cx, cy, cellW, cellH, 4);
@@ -450,13 +499,13 @@ export class UIScene extends Phaser.Scene {
 
         if (item) {
           const rarityColor = RARITY_COLORS[item.rarity] || '#ffffff';
-          const displayName = item.name.length > 9 ? item.name.substring(0, 8) + '.' : item.name;
 
-          const itemText = this.add.text(cx + cellW / 2, cy + 14, displayName, {
+          const itemText = this.add.text(cx + cellW / 2, cy + 14, item.name, {
             fontFamily: 'monospace',
-            fontSize: '8px',
+            fontSize: '9px',
             color: rarityColor,
             align: 'center',
+            wordWrap: { width: cellW - 8 },
           }).setOrigin(0.5).setDepth(3);
           this.invCellElements.push(itemText);
 
@@ -518,7 +567,7 @@ export class UIScene extends Phaser.Scene {
           });
           hitArea.on('pointerout', () => {
             cellBg.clear();
-            cellBg.fillStyle(0x0f3460, 0.5);
+            cellBg.fillStyle(cellFillColor, 0.5);
             cellBg.fillRoundedRect(cx, cy, cellW, cellH, 4);
             cellBg.lineStyle(1, 0x555577, 1);
             cellBg.strokeRoundedRect(cx, cy, cellW, cellH, 4);
@@ -770,6 +819,16 @@ export class UIScene extends Phaser.Scene {
     // Auto-skip filtered rarities
     if (this.player.lootFilter && this.player.lootFilter[item.rarity]) {
       return; // silently skip this item
+    }
+
+    // Filter non-upgrades if enabled
+    if (this.player.filterUpgradesOnly) {
+      const equippedSlotKey = item.slot === SLOT.RING ? 'ring' : item.slot;
+      const equippedItem = this.player.equipment[equippedSlotKey] || null;
+      if (equippedItem) {
+        const comparison = compareItems(equippedItem, item, this.player.getComputedStats());
+        if (!comparison.overallBetter) return; // skip non-upgrades
+      }
     }
 
     if (!this.player.isInventoryFull()) {

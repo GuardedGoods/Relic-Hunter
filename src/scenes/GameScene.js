@@ -117,22 +117,6 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(5);
     this._updateProgressBar();
 
-    // ---- Fury Resource Bar ----
-    const furyBarX = 20;
-    const furyBarY = 98;
-    const furyBarW = COMBAT_W - 40;
-    const furyBarH = 10;
-    this.furyBarBg = this.add.graphics().setDepth(2);
-    this.furyBarBg.fillStyle(0x0a0a18, 1);
-    this.furyBarBg.fillRoundedRect(furyBarX, furyBarY, furyBarW, furyBarH, 3);
-    this.furyBarBg.lineStyle(1, 0x333355, 0.5);
-    this.furyBarBg.strokeRoundedRect(furyBarX, furyBarY, furyBarW, furyBarH, 3);
-
-    this.furyBarFill = this.add.graphics().setDepth(3);
-    this.furyBarLabel = this.add.text(furyBarX + 4, furyBarY, `${this.classData.resource.name}: 0/${this.classData.resource.max}`, {
-      fontFamily: 'monospace', fontSize: '8px', color: this.classData.resource.color || '#e94560',
-    }).setDepth(4);
-
     // Ember Storm indicator (hidden initially)
     this.stormOverlay = this.add.graphics().setDepth(1).setAlpha(0);
     this.stormLabel = this.add.text(COMBAT_CX, 76, '', {
@@ -498,8 +482,6 @@ export class GameScene extends Phaser.Scene {
     // Update depth progress bar
     this._updateProgressBar();
 
-    // Update fury bar
-    this._updateFuryBar();
 
     // Ember Storm tick
     if (this.emberStorm.active) {
@@ -1462,10 +1444,6 @@ export class GameScene extends Phaser.Scene {
         btn.icon.setAlpha(1);
       }
 
-      // Show fury cost requirement (dim if not enough fury)
-      if (ab.furyCost > 0 && this.combatSystem.fury < ab.furyCost) {
-        btn.icon.setAlpha(Math.max(btn.icon.alpha, 0.3));
-      }
     }
   }
 
@@ -1492,11 +1470,6 @@ export class GameScene extends Phaser.Scene {
 
     container.add(this.add.text(ttX + 8, ttY + 24, def.desc, {
       fontFamily: 'monospace', fontSize: '10px', color: '#ccccdd', lineSpacing: 2,
-    }));
-
-    const costText = def.furyCost > 0 ? `Cost: ${def.furyCost} Fury` : (def.furyCost < 0 ? `Generates: ${Math.abs(def.furyCost)} Fury` : 'Free');
-    container.add(this.add.text(ttX + 8, ttY + ttH - 26, costText, {
-      fontFamily: 'monospace', fontSize: '9px', color: '#aaaacc',
     }));
 
     container.add(this.add.text(ttX + ttW - 8, ttY + ttH - 14, `CD: ${def.cd}`, {
@@ -1574,26 +1547,6 @@ export class GameScene extends Phaser.Scene {
 
   // ---- Fury bar ----
 
-  _updateFuryBar() {
-    if (!this.combatSystem) return;
-    const fury = Math.floor(this.combatSystem.fury || 0);
-    const maxFury = this.combatSystem.maxFury || 100;
-    const ratio = fury / maxFury;
-    const barX = 20;
-    const barW = COMBAT_W - 40;
-    const barH = 10;
-    const barY = 98;
-
-    this.furyBarFill.clear();
-    if (ratio > 0) {
-      const colorHex = this.classData.resource?.color || '#e94560';
-      const colorInt = Phaser.Display.Color.HexStringToColor(colorHex).color;
-      this.furyBarFill.fillStyle(colorInt, 1);
-      this.furyBarFill.fillRoundedRect(barX + 1, barY + 1, (barW - 2) * ratio, barH - 2, 2);
-    }
-    this.furyBarLabel.setText(`${this.classData.resource.name}: ${fury}/${maxFury}`);
-  }
-
   // ---- End run ----
 
   _endRun() {
@@ -1637,6 +1590,7 @@ export class GameScene extends Phaser.Scene {
   _showTalentTree() {
     if (this.talentPanel) { this._closeTalentTree(); return; }
     if (!this.isPaused) this.togglePause();
+    this.events.emit('talentTreeToggled', true);
     const w = this.scale.width;
     const h = this.scale.height;
     const container = this.add.container(0, 0).setDepth(60);
@@ -1725,5 +1679,6 @@ export class GameScene extends Phaser.Scene {
 
   _closeTalentTree() {
     if (this.talentPanel) { this.talentPanel.destroy(); this.talentPanel = null; }
+    this.events.emit('talentTreeToggled', false);
   }
 }

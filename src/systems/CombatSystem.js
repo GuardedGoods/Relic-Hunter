@@ -82,24 +82,12 @@ export class CombatSystem {
     const attack = stats.attack || 10;
     const maxHp = stats.maxHealth || 100;
 
-    // Check fury cost (positive = costs fury, negative = generates fury)
-    const furyCost = ability.furyCost || 0;
-    if (furyCost > 0 && this.fury < furyCost) return null; // not enough fury
-
     // Execute check — only usable on enemies below 30% HP
     if (abilityKey === 'execute' && this.enemy) {
       if (this.enemy.health > this.enemy.maxHealth * 0.3) return null;
     }
 
     ability.currentCooldown = ability.cooldown;
-
-    // Pay/generate fury
-    if (furyCost > 0) {
-      this.fury = Math.max(0, this.fury - furyCost);
-    } else if (furyCost < 0) {
-      this.fury = Math.min(this.maxFury, this.fury - furyCost); // negative cost = gain
-    }
-    this.furyDecayTimer = 0; // reset decay timer on ability use
 
     switch (abilityKey) {
       case 'cleave': {
@@ -356,11 +344,6 @@ export class CombatSystem {
       }
     }
 
-    // Fury decay (decays at furyDecayRate per second after furyDecayDelay of no combat)
-    this.furyDecayTimer += deltaMs;
-    if (this.furyDecayTimer >= this.furyDecayDelay && this.fury > 0) {
-      this.fury = Math.max(0, this.fury - this.furyDecayRate * (deltaMs / 1000));
-    }
 
     const events = [];
 
@@ -374,6 +357,28 @@ export class CombatSystem {
         if (this.enemy && this.enemy.health > 0) {
           this.enemy.health -= bleed.tickDamage;
           events.push({ type: 'bleedTick', data: { damage: bleed.tickDamage } });
+
+          // Check if bleed killed the enemy
+          if (this.enemy.health <= 0) {
+            const gold = this.enemy.goldReward;
+            events.push({ type: 'enemyDeath', data: { enemyName: this.enemy.name, gold, isElite: this.enemy.isElite, isBoss: this.enemy.isBoss || false } });
+            const dropChance = (this.enemy.isElite || this.enemy.isBoss) ? ELITE_LOOT_DROP_CHANCE : LOOT_DROP_CHANCE;
+            if (Math.random() < dropChance) {
+              events.push({ type: 'lootDrop', data: { item: this.dropLoot(this.depth) } });
+            }
+            this.bleedTargets = [];
+            const isBossDepth = this.depth > 0 && this.depth % BOSS_DEPTH_INTERVAL === 0;
+            const bossNotYetSpawned = this.bossSpawnedAtDepth !== this.depth;
+            if (isBossDepth && bossNotYetSpawned) {
+              this.enemy = this.spawnBoss(this.depth);
+              this.bossSpawnedAtDepth = this.depth;
+            } else {
+              this.enemy = this.spawnEnemy(this.depth);
+            }
+            this.playerAttackTimer = 0;
+            this.enemyAttackTimer = 0;
+            break;
+          }
         }
         if (bleed.remainingTicks <= 0) {
           this.bleedTargets.splice(i, 1);
@@ -381,7 +386,8 @@ export class CombatSystem {
       }
     }
 
-    // --- Player attacks ---
+    // --- Player attacks (skip if enemy died from bleed) ---
+    if (!this.enemy || this.enemy.health <= 0) return events;
     const attackInterval = 1000 / (this.player.stats?.attackSpeed || this.player.attackSpeed || 1);
     this.playerAttackTimer += deltaMs;
 
@@ -396,9 +402,6 @@ export class CombatSystem {
         data: { damage, isCrit, enemyHealthRemaining: Math.max(0, this.enemy.health) },
       });
 
-      // Generate fury from attacking
-      this.fury = Math.min(this.maxFury, this.fury + 12);
-      this.furyDecayTimer = 0;
 
       // Check enemy death
       if (this.enemy.health <= 0) {
@@ -465,9 +468,7 @@ export class CombatSystem {
         data: { damage, playerHealthRemaining: this.player.health },
       });
 
-      // Fury from taking damage
-      this.fury = Math.min(this.maxFury, this.fury + 6);
-      this.furyDecayTimer = 0;
+
 
       if (this.player.health <= 0) {
         this.active = false;
