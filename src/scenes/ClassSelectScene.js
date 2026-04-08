@@ -110,7 +110,7 @@ export class ClassSelectScene extends Phaser.Scene {
     // ---- Talent trees (below class info on the left) ----
     this.add.text(leftCenterX, cardY + 270, 'TALENT TREES', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
@@ -123,7 +123,7 @@ export class ClassSelectScene extends Phaser.Scene {
       // Tree icon + name
       this.add.text(leftX, ty, `${tree.icon} ${tree.name}`, {
         fontFamily: 'monospace',
-        fontSize: '13px',
+        fontSize: '18px',
         color: tree.color,
         fontStyle: 'bold',
       }).setDepth(5);
@@ -142,7 +142,7 @@ export class ClassSelectScene extends Phaser.Scene {
 
     this.add.text(rightX + 200, cardY + 30, 'ABILITIES', {
       fontFamily: 'monospace',
-      fontSize: '14px',
+      fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(5);
@@ -188,7 +188,7 @@ export class ClassSelectScene extends Phaser.Scene {
     // Name
     this.add.text(x + 60, y + 10, ability.name, {
       fontFamily: 'monospace',
-      fontSize: '16px',
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setDepth(5);
@@ -234,7 +234,7 @@ export class ClassSelectScene extends Phaser.Scene {
 
     const text = this.add.text(x, y, label, {
       fontFamily: 'monospace',
-      fontSize: '18px',
+      fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(6);
