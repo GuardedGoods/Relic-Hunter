@@ -5,6 +5,8 @@ import { EmberStormSystem } from '../systems/EmberStormSystem.js';
 import { saveGame } from '../systems/SaveSystem.js';
 import { RARITY_COLORS, ZONES } from '../data/constants.js';
 import { CLASSES, TALENT_TIER_UNLOCK_POINTS } from '../data/classes.js';
+import { compareItems } from '../systems/InventorySystem.js';
+import { preloadAssets, hasAsset, drawSpriteOrNull, drawBgOrNull, getEnemySpriteKey } from '../systems/AssetManager.js';
 
 // Combat area layout constants
 const COMBAT_W = 680;
@@ -20,6 +22,10 @@ export class GameScene extends Phaser.Scene {
     this.saveData = data.saveData || null;
     this.classId = data.classId || 'slayer';
     this.classData = CLASSES[this.classId] || CLASSES.slayer;
+  }
+
+  preload() {
+    preloadAssets(this);
   }
 
   create() {
@@ -518,6 +524,15 @@ export class GameScene extends Phaser.Scene {
     const eq = this.player.equipment || {};
     g.clear();
 
+    // Try sprite image first
+    if (!this._heroSprite && hasAsset(this, 'hero')) {
+      this._heroSprite = drawSpriteOrNull(this, 'hero', px, py, 100, 140);
+    }
+    if (this._heroSprite) {
+      this._heroSprite.setPosition(px, py);
+      return;
+    }
+
     // Helper: get rarity-based color for equipped item, or default
     const slotColor = (slot, defaultColor) => {
       const item = eq[slot];
@@ -672,6 +687,18 @@ export class GameScene extends Phaser.Scene {
     const ey = this.enemyY;
     const isBoss = enemy.isBoss || false;
     const s = isBoss ? 1.4 : 1;
+
+    // Try sprite image first
+    const spriteKey = getEnemySpriteKey(enemy.name, isBoss);
+    if (hasAsset(this, spriteKey)) {
+      if (this._enemySprite) this._enemySprite.destroy();
+      this._enemySprite = drawSpriteOrNull(this, spriteKey, ex, ey, 100 * s, 140 * s);
+      if (this._enemySprite) return;
+    } else if (this._enemySprite) {
+      this._enemySprite.destroy();
+      this._enemySprite = null;
+    }
+
     const name = enemy.name.toLowerCase();
 
     // Pick shape/colors based on enemy name keywords
@@ -778,6 +805,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   _drawZoneBackground(g, w, h, zoneId) {
+    // Try image background first
+    const bgImg = drawBgOrNull(this, zoneId, w, h);
+    if (bgImg) return;
+
     const zoneColors = {
       ashveil:      { sky: 0x1a1a2e, ground: 0x2a2520, accent: 0xcc8833 },
       embersteppe:  { sky: 0x1a1208, ground: 0x2a1a0a, accent: 0xcc4400 },
